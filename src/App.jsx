@@ -9,6 +9,7 @@ import Popular from './Components/Views/Popular'
 import Login from './Components/Layout/Login'
 import Register from './Components/Layout/Register'
 import CardDetail from './Components/Layout/CardDetail'
+import AdminDashboard from './admin/AdminDashboard'
 
 
 const App = () => {
@@ -20,12 +21,16 @@ const App = () => {
   const isLoginPage = pathname === '/login'
   const isRegisterPage = pathname === '/register'
   const isCardDetailPage = pathname === '/course-detail' || pathname === '/courses/detail'
+  const isAdminPage = pathname === '/admin' || pathname === '/admin/dashboard'
   const isAuthPage = isLoginPage || isRegisterPage
+  const isStandalonePage = isAuthPage || isAdminPage
 
   return (
     <div>
-      {!isAuthPage && <Navbar />}
-      {isContactPage ? (
+      {!isStandalonePage && <Navbar />}
+      {isAdminPage ? (
+        <AdminDashboard />
+      ) : isContactPage ? (
         <Contact />
       ) : isCardDetailPage ? (
         <CardDetail />
@@ -45,7 +50,7 @@ const App = () => {
           <Home />
         </>
       )}
-      {!isAuthPage && <Footer />}
+      {!isStandalonePage && <Footer />}
     </div>
   )
 }
