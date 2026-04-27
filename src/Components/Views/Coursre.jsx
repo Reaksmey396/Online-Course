@@ -465,18 +465,23 @@ const Coursre = () => {
                   key={course.title}
                   className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200"
                 >
-                  <div className="relative">
+                  <a className="block" href="/course-detail">
+                    <div className="relative">
                     <img className="h-48 w-full object-cover" src={course.image} alt={course.title} />
                     <span
                       className={`absolute left-4 top-4 rounded-full px-4 py-1.5 text-xs font-bold ${course.badgeClass}`}
                     >
                       {course.category}
                     </span>
-                  </div>
+                    </div>
+                  </a>
                   <div className="p-6">
-                    <h2 className="min-h-16 text-[1.35rem] font-extrabold leading-snug tracking-normal text-slate-950">
+                    <a
+                      className="block min-h-16 text-[1.35rem] font-extrabold leading-snug tracking-normal text-slate-950 transition hover:text-[#302be2]"
+                      href="/course-detail"
+                    >
                       {course.title}
-                    </h2>
+                    </a>
                     <p className="mt-4 text-sm text-slate-700">{course.instructor}</p>
                     <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
                       <FontAwesomeIcon className="text-amber-500" icon={faStar} />

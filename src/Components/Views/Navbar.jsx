@@ -40,12 +40,12 @@ const Navbar = () => {
         </div>
 
         <div className="hidden items-center gap-3 sm:flex">
-          <a className="hidden text-sm font-medium text-slate-500 hover:text-[#2d2be8] sm:inline" href="#login">
+          <a className="hidden text-sm font-medium text-slate-500 hover:text-[#2d2be8] sm:inline" href="/login">
             Login
           </a>
           <a
             className="rounded-md bg-[#2f2bdc] px-4 py-2.5 text-sm font-bold text-white shadow-sm shadow-indigo-500/20 transition hover:bg-[#1916b8]"
-            href="/pricing"
+            href="/register"
           >
             Get Started
           </a>
@@ -104,13 +104,13 @@ const Navbar = () => {
             <div className="absolute bottom-0 left-0 right-0 grid gap-3 border-t border-slate-200 p-5">
               <a
                 className="rounded-lg border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:border-[#2d2be8] hover:text-[#2d2be8]"
-                href="#login"
+                href="/login"
               >
                 Login
               </a>
               <a
                 className="rounded-lg bg-[#2f2bdc] px-4 py-3 text-center text-sm font-bold text-white shadow-sm shadow-indigo-500/20 transition hover:bg-[#1916b8]"
-                href="/pricing"
+                href="/register"
               >
                 Get Started
               </a>
