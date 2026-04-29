@@ -227,7 +227,7 @@ const Popular = () => {
             <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm" key={course.title}>
               <div className="relative">
                 <img className="h-48 w-full object-cover" src={course.image} alt={course.title} />
-                <span className="absolute left-3 top-3 rounded bg-[#332bdc] px-3 py-1 text-[10px] font-black uppercase text-white">
+                <span className="absolute left-3 top-3 rounded bg-[#332bdc] px-3 py-1 text-[10px] font-black  text-white">
                   {course.badge}
                 </span>
               </div>

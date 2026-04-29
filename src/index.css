@@ -14,6 +14,162 @@ body {
   background: #f7f8ff;
 }
 
+.auth-scenic-bg::before {
+  animation: authSceneZoom 24s ease-in-out infinite alternate;
+  background-image: url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1800&q=85");
+  background-position: center 42%;
+  background-size: cover;
+  content: "";
+  inset: -24px;
+  position: absolute;
+}
+
+.auth-bg-drift {
+  animation: authDrift 18s ease-in-out infinite alternate;
+  background:
+    linear-gradient(180deg, rgb(18 73 95 / 0.18), rgb(3 16 35 / 0.78)),
+    radial-gradient(circle at 52% 32%, rgb(255 195 172 / 0.34), transparent 28%);
+  inset: 0;
+  position: absolute;
+}
+
+.auth-bg-glow {
+  animation: authGlow 7s ease-in-out infinite alternate;
+  background: radial-gradient(circle at 52% 28%, rgb(255 196 169 / 0.34), transparent 22%);
+  inset: 0;
+  position: absolute;
+}
+
+.auth-bg-mist {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.16), transparent);
+  filter: blur(18px);
+  height: 90px;
+  left: -30%;
+  position: absolute;
+  width: 62%;
+}
+
+.auth-bg-mist-one {
+  animation: authMist 22s linear infinite;
+  top: 24%;
+}
+
+.auth-bg-mist-two {
+  animation: authMist 30s linear infinite reverse;
+  opacity: 0.65;
+  top: 70%;
+}
+
+.auth-code-panel::after {
+  animation: authCodeSweep 9s ease-in-out infinite;
+  background: linear-gradient(120deg, transparent 20%, rgb(255 255 255 / 0.18), transparent 80%);
+  content: "";
+  height: 150%;
+  left: -80%;
+  position: absolute;
+  top: -25%;
+  transform: rotate(8deg);
+  width: 42%;
+  z-index: 1;
+}
+
+.auth-code-image {
+  animation: authCodeImage 20s ease-in-out infinite alternate;
+  filter: saturate(1.08);
+}
+
+.auth-panel-glow {
+  animation: authPanelGlow 6s ease-in-out infinite alternate;
+  background:
+    radial-gradient(circle at 18% 80%, rgb(37 99 235 / 0.6), transparent 30%),
+    radial-gradient(circle at 62% 12%, rgb(96 165 250 / 0.28), transparent 26%);
+  inset: 0;
+  position: absolute;
+  z-index: 1;
+}
+
+@keyframes authSceneZoom {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.08) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+@keyframes authDrift {
+  from {
+    transform: translate3d(-1%, 0, 0);
+  }
+
+  to {
+    transform: translate3d(1.5%, -1%, 0);
+  }
+}
+
+@keyframes authGlow {
+  from {
+    opacity: 0.35;
+  }
+
+  to {
+    opacity: 0.75;
+  }
+}
+
+@keyframes authMist {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(220%, 14px, 0);
+  }
+}
+
+@keyframes authCodeImage {
+  from {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: scale(1.09) translate3d(-2%, -1%, 0);
+  }
+}
+
+@keyframes authPanelGlow {
+  from {
+    opacity: 0.72;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes authCodeSweep {
+  0%,
+  38% {
+    transform: translateX(0) rotate(8deg);
+  }
+
+  100% {
+    transform: translateX(420%) rotate(8deg);
+  }
+}
+
+article :is(
+  h2,
+  h3,
+  .card-title-font,
+  [class*='font-bold'],
+  [class*='font-black'],
+  [class*='font-extrabold']
+) {
+  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+}
+
 html.dark body {
   background: #172033;
 }

@@ -5,7 +5,6 @@ import {
   faCalendarDays,
   faCartShopping,
   faChevronDown,
-  faGraduationCap,
   faStar,
   faUserGroup,
 } from '@fortawesome/free-solid-svg-icons'
@@ -30,6 +29,43 @@ const students = [
   ['Michael Brown', 'michael.brown@example.com', 'UI/UX Design', 'May 30, 2024'],
   ['Emily Davis', 'emily.davis@example.com', 'Python Programming', 'May 29, 2024'],
   ['David Wilson', 'david.wilson@example.com', 'Digital Marketing', 'May 28, 2024'],
+]
+
+const chartMonths = ['Jan', 'Feb', 'Mar', 'April', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const chartGrid = ['80Hr', '60Hr', '40Hr', '20Hr', '0Hr']
+const chartBounds = { left: 56, right: 844, top: 48, bottom: 288, max: 80 }
+
+// Change these monthly values to control the graph's increases and decreases.
+const studyHours = [4, 14, 35, 48, 27, 34, 3, 8, 1, 10, 27, 17]
+const testHours = [8, 24, 14, 58, 39, 24, 38, 16, 48, 60, 47, 7]
+
+const getChartPoints = (values) => {
+  const xStep = (chartBounds.right - chartBounds.left) / (chartMonths.length - 1)
+
+  return values.map((value, index) => ({
+    month: chartMonths[index],
+    value,
+    x: chartBounds.left + index * xStep,
+    y: chartBounds.bottom - (value / chartBounds.max) * (chartBounds.bottom - chartBounds.top),
+  }))
+}
+
+const getSmoothPath = (points) => points.reduce((path, point, index) => {
+  if (index === 0) {
+    return `M${point.x},${point.y}`
+  }
+
+  const previous = points[index - 1]
+  const controlDistance = (point.x - previous.x) * 0.42
+
+  return `${path} C${previous.x + controlDistance},${previous.y} ${point.x - controlDistance},${point.y} ${point.x},${point.y}`
+}, '')
+
+const getAreaPath = (points) => `${getSmoothPath(points)} L${chartBounds.right},298 L${chartBounds.left},298 Z`
+
+const chartSeries = [
+  { label: 'Study', color: '#0fb7bb', areaId: 'studyArea', points: getChartPoints(studyHours) },
+  { label: 'Test', color: '#ff8a4c', areaId: 'testArea', points: getChartPoints(testHours) },
 ]
 
 const DashboardPage = () => (
@@ -67,19 +103,83 @@ const DashboardPage = () => (
     </div>
 
     <div className="mt-6 grid gap-6 2xl:grid-cols-[1fr_480px]">
-      <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/50">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-black">Overview</h2>
-          <div className="flex gap-6 text-sm text-slate-500">
-            <span className="inline-flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-violet-500" /> Students</span>
-            <span className="inline-flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-blue-500" /> Sales</span>
+      <section className="rounded-2xl border border-cyan-50 bg-white p-5 shadow-lg shadow-cyan-100/60">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-black text-slate-950">Study Statistics</h2>
+          <div className="flex items-center gap-5 text-sm text-slate-500">
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#0fb7bb]" /> Study</span>
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#ff8a4c]" /> Test</span>
+            <button className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-500 shadow-sm" type="button">
+              Monthly
+              <FontAwesomeIcon className="text-xs" icon={faChevronDown} />
+            </button>
           </div>
         </div>
-        <div className="mt-8 h-80">
-          <svg className="h-full w-full" viewBox="0 0 760 300" preserveAspectRatio="none">
-            {Array.from({ length: 5 }, (_, index) => <line key={index} x1="40" x2="730" y1={50 + index * 45} y2={50 + index * 45} stroke="#eef2ff" />)}
-            <path d="M40,128 L90,122 L140,132 L180,88 L225,100 L270,112 L315,76 L360,108 L405,104 L450,70 L490,92 L535,58 L580,82 L625,78 L665,92 L710,76 L730,88" fill="none" stroke="#8b5cf6" strokeWidth="3" />
-            <path d="M40,188 L90,166 L140,184 L180,170 L225,172 L270,194 L315,182 L360,162 L405,184 L450,176 L490,174 L535,136 L580,144 L625,126 L665,132 L710,106 L730,120" fill="none" stroke="#3b82f6" strokeWidth="3" />
+
+        <div className="mt-7 h-80 overflow-hidden">
+          <svg className="h-full w-full" viewBox="0 0 860 320" preserveAspectRatio="none" role="img" aria-label="Study and test hours by month">
+            <defs>
+              <linearGradient id="studyArea" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#0fb7bb" stopOpacity="0.48" />
+                <stop offset="100%" stopColor="#0fb7bb" stopOpacity="0.04" />
+              </linearGradient>
+              <linearGradient id="testArea" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#ff8a4c" stopOpacity="0.42" />
+                <stop offset="100%" stopColor="#ff8a4c" stopOpacity="0.03" />
+              </linearGradient>
+            </defs>
+
+            {[48, 98, 148, 198, 248].map((y) => (
+              <line key={y} x1="54" x2="838" y1={y} y2={y} stroke="#edf2f7" strokeDasharray="3 4" />
+            ))}
+
+            {chartGrid.map((label, index) => (
+              <text key={label} x="8" y={52 + index * 50} fill="#6b7280" fontSize="13" fontWeight="600">
+                {label}
+              </text>
+            ))}
+
+            {chartSeries.map((series) => (
+              <path key={`${series.label}-area`} d={getAreaPath(series.points)} fill={`url(#${series.areaId})`} />
+            ))}
+
+            {chartSeries.map((series) => (
+              <path
+                key={`${series.label}-line`}
+                d={getSmoothPath(series.points)}
+                fill="none"
+                stroke={series.color}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+              />
+            ))}
+
+            {chartSeries.flatMap((series) => series.points.map((point, index) => {
+              const previousValue = series.points[index - 1]?.value ?? point.value
+              const trend = point.value - previousValue
+              const trendText = trend > 0 ? `increased ${trend}Hr` : trend < 0 ? `decreased ${Math.abs(trend)}Hr` : 'no change'
+
+              return (
+                <circle key={`${series.label}-${point.month}`} cx={point.x} cy={point.y} r="4" fill={series.color} stroke="#ffffff" strokeWidth="2">
+                  <title>{`${series.label} ${point.month}: ${point.value}Hr, ${trendText}`}</title>
+                </circle>
+              )
+            }))}
+
+            <g>
+              <rect x="350" y="68" width="74" height="56" rx="8" fill="#ffffff" stroke="#edf2f7" />
+              <text x="382" y="88" fill="#334155" fontSize="13" fontWeight="600">Study</text>
+              <text x="382" y="108" fill="#334155" fontSize="13" fontWeight="600">Test</text>
+              <rect x="362" y="78" width="8" height="8" rx="2" fill="#0fb7bb" />
+              <rect x="362" y="98" width="8" height="8" rx="2" fill="#ff8a4c" />
+            </g>
+
+            {chartMonths.map((month, index) => (
+              <text key={month} x={60 + index * 72} y="316" fill="#6b7280" fontSize="13" fontWeight="600" textAnchor="middle">
+                {month}
+              </text>
+            ))}
           </svg>
         </div>
       </section>

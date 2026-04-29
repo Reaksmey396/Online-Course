@@ -477,7 +477,7 @@ const Coursre = () => {
                   </a>
                   <div className="p-6">
                     <a
-                      className="block min-h-16 text-[1.35rem] font-extrabold leading-snug tracking-normal text-slate-950 transition hover:text-[#302be2]"
+                      className="card-title-font block min-h-16 text-[1.35rem] font-extrabold leading-snug tracking-normal text-slate-950 transition hover:text-[#302be2]"
                       href="/course-detail"
                     >
                       {course.title}

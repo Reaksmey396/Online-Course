@@ -1,166 +1,131 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faArrowRight,
-  faBookOpen,
-  faCertificate,
   faEnvelope,
-  faEye,
+  faGraduationCap,
   faLock,
   faUser,
-  faUserPlus,
 } from '@fortawesome/free-solid-svg-icons'
 
 const Register = () => {
   return (
-    <main className="min-h-screen bg-white text-slate-950">
-      <section className="grid min-h-screen lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="flex min-h-screen items-center justify-center bg-[#f7f8ff] px-5 py-10 sm:px-8">
-          <div className="w-full max-w-lg">
-            <a className="mb-10 inline-flex items-center gap-3 text-xl font-black text-[#1f22e8]" href="/">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#edf0ff]">
-                <FontAwesomeIcon icon={faBookOpen} />
-              </span>
-              Online Course
-            </a>
-            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-200/80 sm:p-9">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf0ff] text-[#302be2]">
-                <FontAwesomeIcon icon={faUserPlus} />
-              </span>
-              <h1 className="mt-6 text-3xl font-black tracking-tight">Create account</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                Start learning with expert-led courses and practical projects.
-              </p>
-
-              <form className="mt-8 grid gap-5">
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <label className="grid gap-2 text-sm font-semibold">
-                    First Name
-                    <div className="relative">
-                      <FontAwesomeIcon
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                        icon={faUser}
-                      />
-                      <input
-                        className="h-14 w-full rounded-xl border border-slate-300 bg-white py-4 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#302be2] focus:ring-4 focus:ring-indigo-100"
-                        placeholder="John"
-                        type="text"
-                      />
-                    </div>
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold">
-                    Last Name
-                    <div className="relative">
-                      <FontAwesomeIcon
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                        icon={faUser}
-                      />
-                      <input
-                        className="h-14 w-full rounded-xl border border-slate-300 bg-white py-4 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#302be2] focus:ring-4 focus:ring-indigo-100"
-                        placeholder="Doe"
-                        type="text"
-                      />
-                    </div>
-                  </label>
-                </div>
-
-                <label className="grid gap-2 text-sm font-semibold">
-                  Email Address
-                  <div className="relative">
-                    <FontAwesomeIcon
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                      icon={faEnvelope}
-                    />
-                    <input
-                      className="h-14 w-full rounded-xl border border-slate-300 bg-white py-4 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#302be2] focus:ring-4 focus:ring-indigo-100"
-                      placeholder="john@example.com"
-                      type="email"
-                    />
-                  </div>
-                </label>
-
-                <label className="grid gap-2 text-sm font-semibold">
-                  Password
-                  <div className="relative">
-                    <FontAwesomeIcon
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                      icon={faLock}
-                    />
-                    <input
-                      className="h-14 w-full rounded-xl border border-slate-300 bg-white py-4 pl-11 pr-12 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#302be2] focus:ring-4 focus:ring-indigo-100"
-                      placeholder="Create a strong password"
-                      type="password"
-                    />
-                    <button
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-[#302be2]"
-                      type="button"
-                      aria-label="Show password"
-                    >
-                      <FontAwesomeIcon icon={faEye} />
-                    </button>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 text-sm leading-6 text-slate-600">
-                  <input className="mt-1 h-4 w-4 accent-[#302be2]" type="checkbox" />
-                  I agree to the Terms of Service and Privacy Policy.
-                </label>
-
-                <button
-                  className="inline-flex h-14 items-center justify-center gap-2 rounded-xl bg-[#302be2] py-4 text-sm font-black text-white shadow-lg shadow-indigo-500/20 transition hover:bg-[#1916b8]"
-                  type="button"
-                >
-                  Create Account
-                  <FontAwesomeIcon icon={faArrowRight} />
-                </button>
-              </form>
-
-              <div className="mt-7 text-center text-sm text-slate-600">
-                Already have an account?{' '}
-                <a className="font-black text-[#302be2]" href="/login">
-                  Sign in
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative hidden overflow-hidden bg-[#302be2] p-12 text-white lg:block">
+    <main className="h-screen overflow-hidden bg-[#f8f9ff] text-[#101828]">
+      <section className="grid h-screen overflow-hidden lg:grid-cols-2">
+        <aside className="auth-code-panel relative hidden h-screen overflow-hidden bg-[#08264a] text-white lg:block">
           <img
-            className="absolute inset-0 h-full w-full object-cover opacity-30"
-            src="https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1200&q=85"
-            alt="Learners collaborating"
+            className="auth-code-image absolute inset-0 h-full w-full object-cover"
+            src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1400&q=85"
+            alt="Learners studying programming together"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#1611a8] via-[#302be2]/90 to-slate-950/80" />
-          <div className="relative flex h-full flex-col justify-between">
-            <a className="inline-flex items-center gap-3 text-xl font-black" href="/">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
-                <FontAwesomeIcon icon={faCertificate} />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#071d35]/82 via-[#0b3c78]/56 to-[#0c3f98]/94" />
+          <div className="auth-panel-glow" />
+
+          <div className="relative z-10 flex h-full flex-col justify-between px-12 py-9">
+            <a className="inline-flex items-center gap-3 text-2xl font-black tracking-tight" href="/">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#2459df] text-lg shadow-lg shadow-blue-950/30">
+                <FontAwesomeIcon icon={faGraduationCap} />
               </span>
               Online Course
             </a>
-            <div>
-              <p className="text-sm font-bold uppercase tracking-wide text-indigo-100">Start today</p>
-              <h2 className="mt-5 max-w-xl text-5xl font-black leading-tight">
-                Learn with mentors, projects, and certificates that prove your skills.
-              </h2>
-              <p className="mt-6 max-w-lg text-base leading-8 text-indigo-50">
-                Build a personal course library, track progress, and learn at a pace that
-                matches your life.
+
+            <div className="max-w-lg">
+              <h1 className="text-4xl font-black leading-[1.12] tracking-tight text-white drop-shadow-lg">
+                Build real coding skills with the world&apos;s best mentors.
+              </h1>
+              <p className="mt-5 max-w-md text-xl leading-8 text-white/86">
+                Join over 2 million learners and start building projects that prove your talent.
               </p>
-              <div className="mt-10 grid grid-cols-2 gap-4">
-                <div className="rounded-xl bg-white/10 p-5">
-                  <p className="text-2xl font-black">120+</p>
-                  <p className="mt-1 text-xs text-indigo-100">Career courses</p>
-                </div>
-                <div className="rounded-xl bg-white/10 p-5">
-                  <p className="text-2xl font-black">24/7</p>
-                  <p className="mt-1 text-xs text-indigo-100">Learning access</p>
-                </div>
-              </div>
             </div>
-            <p className="text-sm text-indigo-100">No credit card required to begin.</p>
           </div>
-        </div>
+        </aside>
+
+        <section className="flex h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top_right,#eef4ff,transparent_34%),#f8f9ff] px-6 py-5 sm:px-10">
+          <div className="w-full max-w-[460px] rounded-2xl border border-slate-200 bg-white/95 p-7 shadow-2xl shadow-blue-950/10">
+            <a className="mb-5 inline-flex items-center gap-3 text-2xl font-black text-[#2459df] lg:hidden" href="/">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#2459df] text-base text-white">
+                <FontAwesomeIcon icon={faGraduationCap} />
+              </span>
+              Online Course
+            </a>
+
+            <div>
+              <span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#2459df]">
+                Start Learning
+              </span>
+              <h2 className="mt-4 text-4xl font-black tracking-tight">Create Account</h2>
+              <p className="mt-2 text-base text-slate-600">Set up your profile and begin coding today.</p>
+            </div>
+
+            <form className="mt-7 grid gap-4">
+              <label className="grid gap-1.5 text-sm font-semibold uppercase tracking-wide">
+                Full Name
+                <div className="relative">
+                  <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faUser} />
+                  <input
+                    className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base normal-case tracking-normal text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    placeholder="Enter your full name"
+                    type="text"
+                  />
+                </div>
+              </label>
+
+              <label className="grid gap-1.5 text-sm font-semibold uppercase tracking-wide">
+                Email Address
+                <div className="relative">
+                  <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faEnvelope} />
+                  <input
+                    className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base normal-case tracking-normal text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    placeholder="name@company.com"
+                    type="email"
+                  />
+                </div>
+              </label>
+
+              <label className="grid gap-1.5 text-sm font-semibold uppercase tracking-wide">
+                Password
+                <div className="relative">
+                  <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faLock} />
+                  <input
+                    className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base normal-case tracking-normal text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    placeholder="Password"
+                    type="password"
+                  />
+                </div>
+              </label>
+
+              <label className="grid gap-1.5 text-sm font-semibold uppercase tracking-wide">
+                Confirm Password
+                <div className="relative">
+                  <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faLock} />
+                  <input
+                    className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base normal-case tracking-normal text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    placeholder="Confirm password"
+                    type="password"
+                  />
+                </div>
+              </label>
+
+              <label className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-700">
+                <input className="h-4 w-4 rounded border-slate-300 accent-[#2459df]" type="checkbox" />
+                <span>I agree to the</span>
+                <a className="text-[#0d49c8] hover:text-[#06328e]" href="#terms">Terms of Service</a>
+                <span>and</span>
+                <a className="text-[#0d49c8] hover:text-[#06328e]" href="#privacy">Privacy Policy</a>
+              </label>
+
+              <button className="mt-2 h-12 rounded-lg bg-[#2459df] text-base font-semibold text-white shadow-lg shadow-blue-700/20 transition hover:bg-[#1746bc]" type="button">
+                Create Account
+              </button>
+            </form>
+
+            <p className="mt-7 border-t border-slate-200 pt-5 text-center text-base text-slate-700">
+              Already have an account?{' '}
+              <a className="font-bold text-[#0d49c8] hover:text-[#06328e]" href="/login">
+                Log In
+              </a>
+            </p>
+
+          </div>
+        </section>
       </section>
     </main>
   )

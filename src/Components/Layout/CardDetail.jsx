@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faBookOpen,
@@ -13,6 +14,7 @@ import {
   faStar,
   faUsers,
   faVideo,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons'
 
 const outcomes = [
@@ -35,6 +37,8 @@ const includes = [
   { icon: faCertificate, text: 'Certificate of completion' },
 ]
 
+const previewVideoUrl = 'https://www.youtube.com/embed/WyCnb7iDeuk?autoplay=1&rel=0'
+
 const reviews = [
   {
     name: 'Jessica Simmons',
@@ -51,6 +55,8 @@ const reviews = [
 ]
 
 const CardDetail = () => {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+
   return (
     <main className="bg-[#f7f8ff] text-slate-950">
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_390px] lg:px-8">
@@ -178,23 +184,49 @@ const CardDetail = () => {
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <article className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl shadow-slate-300/60">
             <div className="relative">
-              <img
-                className="h-56 w-full object-cover"
-                src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85"
-                alt="Course preview instructor"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-950/30">
-                <button
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 text-xl text-[#302be2] shadow-xl backdrop-blur"
-                  type="button"
-                  aria-label="Preview course"
-                >
-                  <FontAwesomeIcon icon={faPlay} />
-                </button>
-              </div>
-              <span className="absolute bottom-4 left-4 rounded bg-slate-950 px-3 py-1.5 text-[10px] font-black uppercase text-white">
-                Preview Course
-              </span>
+              {isPreviewOpen ? (
+                <>
+                  <img
+                    className="h-56 w-full object-cover"
+                    src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85"
+                    alt="Course preview instructor"
+                  />
+                  <button
+                    className="absolute inset-0 flex items-center justify-center bg-slate-950/30"
+                    type="button"
+                    aria-label="Preview course video"
+                    onClick={() => setIsPreviewOpen(true)}
+                  >
+                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 text-xl text-[#302be2] shadow-xl backdrop-blur transition hover:scale-105 hover:bg-white">
+                      <FontAwesomeIcon icon={faPlay} />
+                    </span>
+                  </button>
+                  <span className="absolute bottom-4 left-4 rounded bg-slate-950 px-3 py-1.5 text-[10px] font-black uppercase text-white">
+                    Preview Course
+                  </span>
+                </>
+              ) : (
+                <>
+                  <img
+                    className="h-56 w-full object-cover"
+                    src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=85"
+                    alt="Course preview instructor"
+                  />
+                  <button
+                    className="absolute inset-0 flex items-center justify-center bg-slate-950/30"
+                    type="button"
+                    aria-label="Preview course video"
+                    onClick={() => setIsPreviewOpen(true)}
+                  >
+                    <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 text-xl text-[#302be2] shadow-xl backdrop-blur transition hover:scale-105 hover:bg-white">
+                      <FontAwesomeIcon icon={faPlay} />
+                    </span>
+                  </button>
+                  <span className="absolute bottom-4 left-4 rounded bg-slate-950 px-3 py-1.5 text-[10px] font-black uppercase text-white">
+                    Preview Course
+                  </span>
+                </>
+              )}
             </div>
 
             <div className="p-8">
@@ -233,6 +265,26 @@ const CardDetail = () => {
           </p>
         </aside>
       </section>
+
+      {isPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
+          <button
+            className="absolute right-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white transition hover:bg-white/20"
+            type="button"
+            aria-label="Close preview video"
+            onClick={() => setIsPreviewOpen(false)}
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+          <iframe
+            className="h-[min(72vw,82vh)] w-full max-w-6xl rounded-xl bg-black shadow-2xl"
+            src={previewVideoUrl}
+            title="UI/UX design boot camp preview video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      )}
     </main>
   )
 }
