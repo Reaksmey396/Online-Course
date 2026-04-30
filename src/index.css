@@ -60,19 +60,6 @@ body {
   top: 70%;
 }
 
-.auth-code-panel::after {
-  animation: authCodeSweep 9s ease-in-out infinite;
-  background: linear-gradient(120deg, transparent 20%, rgb(255 255 255 / 0.18), transparent 80%);
-  content: "";
-  height: 150%;
-  left: -80%;
-  position: absolute;
-  top: -25%;
-  transform: rotate(8deg);
-  width: 42%;
-  z-index: 1;
-}
-
 .auth-code-image {
   animation: authCodeImage 20s ease-in-out infinite alternate;
   filter: saturate(1.08);
@@ -145,17 +132,6 @@ body {
 
   to {
     opacity: 1;
-  }
-}
-
-@keyframes authCodeSweep {
-  0%,
-  38% {
-    transform: translateX(0) rotate(8deg);
-  }
-
-  100% {
-    transform: translateX(420%) rotate(8deg);
   }
 }
 
