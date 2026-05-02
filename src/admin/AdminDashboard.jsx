@@ -3,16 +3,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faBell,
   faBookOpen,
-  faBullhorn,
-  faChevronDown,
   faGear,
-  faGraduationCap,
+  faLayerGroup,
+  faRightFromBracket,
   faMagnifyingGlass,
-  faMessage,
-  faStar,
   faTableList,
-  faCartShopping,
-  faChartSimple,
   faHouse,
   faUserGroup,
   faUserTie,
@@ -20,20 +15,33 @@ import {
 import DashboardPage from './pages/DashboardPage'
 import CoursesPage from './pages/CoursesPage'
 import StudentsPage from './pages/StudentsPage'
-import InstructorsPage from './pages/InstructorsPage'
 import SettingsPage from './pages/SettingsPage'
+import { logout } from '../lib/authApi'
+import CategoryPage from './pages/CategoryPage'
 
 const navItems = [
   { label: 'Dashboard', icon: faHouse, page: DashboardPage },
   { label: 'Courses', icon: faTableList, page: CoursesPage },
   { label: 'Students', icon: faUserGroup, page: StudentsPage },
-  { label: 'Instructors', icon: faUserTie, page: InstructorsPage },
+  { label: 'Categories', icon: faLayerGroup, page: CategoryPage },
   { label: 'Settings', icon: faGear, page: SettingsPage },
 ]
 
 const AdminDashboard = () => {
   const [activePage, setActivePage] = useState('Dashboard')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const CurrentPage = navItems.find((item) => item.label === activePage)?.page || DashboardPage
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+
+    try {
+      await logout()
+    } finally {
+      window.location.href = '/login'
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f8ff] text-[#151a33]">
@@ -57,7 +65,10 @@ const AdminDashboard = () => {
                   : 'text-slate-600 hover:bg-slate-50 hover:text-violet-700'
               }`}
               key={item.label}
-              onClick={() => setActivePage(item.label)}
+              onClick={() => {
+                setActivePage(item.label)
+                setSearchQuery('')
+              }}
               type="button"
             >
               <FontAwesomeIcon className="w-6" icon={item.icon} />
@@ -74,8 +85,10 @@ const AdminDashboard = () => {
               <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" icon={faMagnifyingGlass} />
               <input
                 className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm outline-none placeholder:text-slate-400 focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder={`Search ${activePage.toLowerCase()}...`}
                 type="search"
+                value={searchQuery}
               />
             </div>
 
@@ -83,22 +96,23 @@ const AdminDashboard = () => {
               <button className="relative text-xl text-slate-600" type="button" aria-label="Notifications">
                 <FontAwesomeIcon icon={faBell} />
                 <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white">
-                  5
+                  0
                 </span>
               </button>
-              <div className="flex items-center gap-3">
-                <img className="h-11 w-11 rounded-full object-cover" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80" alt="Admin" />
-                <div>
-                  <p className="font-black">Admin</p>
-                  <p className="text-sm text-slate-500">Super Admin</p>
-                </div>
-                <FontAwesomeIcon className="text-slate-500" icon={faChevronDown} />
-              </div>
+              <button
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:text-slate-400"
+                disabled={isLoggingOut}
+                onClick={handleLogout}
+                type="button"
+              >
+                <FontAwesomeIcon icon={faRightFromBracket} />
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
+              </button>
             </div>
           </div>
         </header>
 
-        <CurrentPage />
+        <CurrentPage searchQuery={searchQuery} />
       </section>
     </main>
   )

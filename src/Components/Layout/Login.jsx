@@ -1,12 +1,55 @@
+import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faEnvelope,
   faEye,
+  faEyeSlash,
   faGraduationCap,
   faLock,
 } from '@fortawesome/free-solid-svg-icons'
+import { authRequest, getLoginRedirectPath, getResponseUser, hasTokenSession, saveAuthSession } from '../../lib/authApi'
 
 const Login = () => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    remember: false,
+  })
+  const [error, setError] = useState('')
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target
+    setFormData((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value,
+    }))
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+    setIsSubmitting(true)
+
+    try {
+      const data = await authRequest('/login', formData)
+      const user = getResponseUser(data)
+
+      saveAuthSession(data)
+
+      if (localStorage.getItem('auth_mode') !== 'cookie' && !hasTokenSession()) {
+        throw new Error('Login reached the backend, but Sanctum cookies are blocked by CORS and no token was returned.')
+      }
+
+      window.location.href = getLoginRedirectPath(user)
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <main className="h-screen overflow-hidden bg-white text-[#111827]">
       <section className="grid h-screen overflow-hidden lg:grid-cols-[50%_50%]">
@@ -52,15 +95,19 @@ const Login = () => {
               <p className="mt-2 text-base text-slate-500">Enter your details to access your learning dashboard.</p>
             </div>
 
-            <form className="mt-10 grid gap-5">
+            <form className="mt-10 grid gap-5" onSubmit={handleSubmit}>
               <label className="grid gap-2 text-sm font-semibold tracking-wide">
                 Email Address
                 <div className="relative">
                   <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faEnvelope} />
                   <input
                     className="h-12 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    name="email"
+                    onChange={handleChange}
                     placeholder="name@company.com"
+                    required
                     type="email"
+                    value={formData.email}
                   />
                 </div>
               </label>
@@ -76,22 +123,47 @@ const Login = () => {
                   <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faLock} />
                   <input
                     className="h-12 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-12 text-base text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    name="password"
+                    onChange={handleChange}
                     placeholder="Password"
-                    type="password"
+                    required
+                    type={isPasswordVisible ? 'text' : 'password'}
+                    value={formData.password}
                   />
-                  <button className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-[#2459df]" type="button" aria-label="Show password">
-                    <FontAwesomeIcon icon={faEye} />
+                  <button
+                    aria-label={isPasswordVisible ? 'Hide password' : 'Show password'}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-[#2459df]"
+                    onClick={() => setIsPasswordVisible((current) => !current)}
+                    type="button"
+                  >
+                    <FontAwesomeIcon icon={isPasswordVisible ? faEyeSlash : faEye} />
                   </button>
                 </div>
               </label>
 
               <label className="flex items-center gap-3 text-base text-slate-700">
-                <input className="h-4 w-4 rounded border-slate-300 accent-[#2459df]" type="checkbox" />
+                <input
+                  checked={formData.remember}
+                  className="h-4 w-4 rounded border-slate-300 accent-[#2459df]"
+                  name="remember"
+                  onChange={handleChange}
+                  type="checkbox"
+                />
                 Remember me
               </label>
 
-              <button className="h-12 rounded-lg bg-[#2459df] text-base font-semibold text-white shadow-lg shadow-blue-700/20 transition hover:bg-[#1746bc]" type="button">
-                Login
+              {error && (
+                <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                  {error}
+                </p>
+              )}
+
+              <button
+                className="h-12 rounded-lg bg-[#2459df] text-base font-semibold text-white shadow-lg shadow-blue-700/20 transition hover:bg-[#1746bc] disabled:cursor-not-allowed disabled:bg-slate-400"
+                disabled={isSubmitting}
+                type="submit"
+              >
+                {isSubmitting ? 'Logging in...' : 'Login'}
               </button>
             </form>
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faChevronLeft,
@@ -7,319 +7,24 @@ import {
   faMagnifyingGlass,
   faStar,
 } from '@fortawesome/free-solid-svg-icons'
+import { getCategories, getCourses } from '../../lib/courseApi'
 
 const courses = [
-  {
-    title: 'Mastering Advanced React Patterns',
-    instructor: 'Dr. Sarah Chen',
-    category: 'Development',
-    difficulty: 'Advanced',
-    paid: 'Paid',
-    badgeClass: 'bg-[#4137e8] text-white',
-    rating: '4.9',
-    students: '12,450',
-    duration: '24h 15m',
-    price: '$89.99',
-    image:
-      'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'The Ultimate UI/UX Design Boot Camp',
-    instructor: 'Marcus Thorne',
-    category: 'Design',
-    difficulty: 'Intermediate',
-    paid: 'Paid',
-    badgeClass: 'bg-[#5eddf0] text-slate-900',
-    rating: '4.8',
-    students: '8,920',
-    duration: '42h 30m',
-    price: '$124.00',
-    image:
-      'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Data Science for Business Leaders',
-    instructor: 'Elena Rodriguez',
-    category: 'Business',
-    difficulty: 'Advanced',
-    paid: 'Paid',
-    badgeClass: 'bg-[#d8c0ff] text-[#2114c7]',
-    rating: '4.7',
-    students: '5,300',
-    duration: '18h 00m',
-    price: '$199.99',
-    image:
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Python Foundations: From Zero to Hero',
-    instructor: 'James Wilson',
-    category: 'Development',
-    difficulty: 'Beginner',
-    paid: 'Paid',
-    badgeClass: 'bg-[#4137e8] text-white',
-    rating: '4.9',
-    students: '25,600',
-    duration: '56h 45m',
-    price: '$49.99',
-    image:
-      'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Digital Marketing Strategy 2024',
-    instructor: 'Sophia Anderson',
-    category: 'Marketing',
-    difficulty: 'Intermediate',
-    paid: 'Paid',
-    badgeClass: 'bg-[#e6d4ff] text-[#2114c7]',
-    rating: '4.6',
-    students: '15,200',
-    duration: '30h 20m',
-    price: '$79.00',
-    image:
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Leadership & Team Management',
-    instructor: 'Dr. Robert Vance',
-    category: 'Soft Skills',
-    difficulty: 'Beginner',
-    paid: 'Paid',
-    badgeClass: 'bg-[#5eddf0] text-slate-900',
-    rating: '4.8',
-    students: '9,400',
-    duration: '12h 45m',
-    price: '$95.00',
-    image:
-      'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Computer Science Fundamentals',
-    instructor: 'Avery Brooks',
-    category: 'Computer Science',
-    difficulty: 'Beginner',
-    paid: 'Free',
-    badgeClass: 'bg-[#4137e8] text-white',
-    rating: '4.7',
-    students: '18,300',
-    duration: '16h 10m',
-    price: 'Free',
-    image:
-      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Creative Brand Identity Design',
-    instructor: 'Nina Patel',
-    category: 'Design',
-    difficulty: 'Beginner',
-    paid: 'Paid',
-    badgeClass: 'bg-[#5eddf0] text-slate-900',
-    rating: '4.5',
-    students: '7,810',
-    duration: '20h 25m',
-    price: '$59.00',
-    image:
-      'https://images.unsplash.com/photo-1542744095-291d1f67b221?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Business Management Essentials',
-    instructor: 'Victor Lane',
-    category: 'Business',
-    difficulty: 'Intermediate',
-    paid: 'Free',
-    badgeClass: 'bg-[#d8c0ff] text-[#2114c7]',
-    rating: '4.4',
-    students: '10,120',
-    duration: '14h 40m',
-    price: 'Free',
-    image:
-      'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Full Stack JavaScript Developer',
-    instructor: 'Maya Kingston',
-    category: 'Development',
-    difficulty: 'Intermediate',
-    paid: 'Paid',
-    badgeClass: 'bg-[#4137e8] text-white',
-    rating: '4.8',
-    students: '21,760',
-    duration: '48h 35m',
-    price: '$109.99',
-    image:
-      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Machine Learning With Python',
-    instructor: 'Dr. Kenji Mori',
-    category: 'Data Science',
-    difficulty: 'Advanced',
-    paid: 'Paid',
-    badgeClass: 'bg-[#d8c0ff] text-[#2114c7]',
-    rating: '4.9',
-    students: '19,430',
-    duration: '52h 00m',
-    price: '$149.00',
-    image:
-      'https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'SQL Analytics for Beginners',
-    instructor: 'Priya Nair',
-    category: 'Data Science',
-    difficulty: 'Beginner',
-    paid: 'Free',
-    badgeClass: 'bg-[#d8c0ff] text-[#2114c7]',
-    rating: '4.6',
-    students: '13,980',
-    duration: '11h 30m',
-    price: 'Free',
-    image:
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Cloud Computing Essentials',
-    instructor: 'Owen Carter',
-    category: 'Computer Science',
-    difficulty: 'Intermediate',
-    paid: 'Paid',
-    badgeClass: 'bg-[#4137e8] text-white',
-    rating: '4.5',
-    students: '11,260',
-    duration: '28h 50m',
-    price: '$74.99',
-    image:
-      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Cybersecurity Practical Lab',
-    instructor: 'Lena Brooks',
-    category: 'Computer Science',
-    difficulty: 'Advanced',
-    paid: 'Paid',
-    badgeClass: 'bg-[#4137e8] text-white',
-    rating: '4.8',
-    students: '8,640',
-    duration: '34h 15m',
-    price: '$119.00',
-    image:
-      'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Mobile App Design in Figma',
-    instructor: 'Camila Reyes',
-    category: 'Design',
-    difficulty: 'Intermediate',
-    paid: 'Paid',
-    badgeClass: 'bg-[#5eddf0] text-slate-900',
-    rating: '4.7',
-    students: '16,820',
-    duration: '22h 10m',
-    price: '$69.99',
-    image:
-      'https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Product Management Sprint',
-    instructor: 'Daniel Foster',
-    category: 'Business',
-    difficulty: 'Intermediate',
-    paid: 'Paid',
-    badgeClass: 'bg-[#d8c0ff] text-[#2114c7]',
-    rating: '4.6',
-    students: '12,760',
-    duration: '19h 20m',
-    price: '$84.00',
-    image:
-      'https://images.unsplash.com/photo-1552664688-cf412ec27db2?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Finance for Startup Founders',
-    instructor: 'Grace Morgan',
-    category: 'Business',
-    difficulty: 'Beginner',
-    paid: 'Free',
-    badgeClass: 'bg-[#d8c0ff] text-[#2114c7]',
-    rating: '4.4',
-    students: '6,950',
-    duration: '9h 45m',
-    price: 'Free',
-    image:
-      'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Social Media Content Systems',
-    instructor: 'Hannah Pierce',
-    category: 'Marketing',
-    difficulty: 'Beginner',
-    paid: 'Paid',
-    badgeClass: 'bg-[#e6d4ff] text-[#2114c7]',
-    rating: '4.5',
-    students: '14,440',
-    duration: '15h 05m',
-    price: '$39.99',
-    image:
-      'https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'SEO Strategy Masterclass',
-    instructor: 'Noah Ellis',
-    category: 'Marketing',
-    difficulty: 'Advanced',
-    paid: 'Paid',
-    badgeClass: 'bg-[#e6d4ff] text-[#2114c7]',
-    rating: '4.7',
-    students: '9,710',
-    duration: '26h 30m',
-    price: '$89.00',
-    image:
-      'https://images.unsplash.com/photo-1432888622747-4eb9a8f2c293?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Public Speaking for Professionals',
-    instructor: 'Isabel Grant',
-    category: 'Soft Skills',
-    difficulty: 'Beginner',
-    paid: 'Free',
-    badgeClass: 'bg-[#5eddf0] text-slate-900',
-    rating: '4.6',
-    students: '17,220',
-    duration: '8h 55m',
-    price: 'Free',
-    image:
-      'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    title: 'Agile Team Collaboration',
-    instructor: 'Ethan Moore',
-    category: 'Soft Skills',
-    difficulty: 'Intermediate',
-    paid: 'Paid',
-    badgeClass: 'bg-[#5eddf0] text-slate-900',
-    rating: '4.5',
-    students: '10,680',
-    duration: '13h 25m',
-    price: '$54.99',
-    image:
-      'https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=900&q=85',
-  },
+  
 ]
 
 const filters = {
   Categories: [
-    'Computer Science',
-    'Design & Creative',
-    'Business Management',
-    'Data Science',
-    'Development',
-    'Marketing',
-    'Soft Skills',
   ],
   'Difficulty Level': ['Beginner', 'Intermediate', 'Advanced'],
   'Price Range': ['Free', 'Paid'],
 }
 
 const Coursre = () => {
+  const [courseItems, setCourseItems] = useState(courses)
+  const [categoryItems, setCategoryItems] = useState(filters.Categories)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [difficulty, setDifficulty] = useState('')
@@ -333,12 +38,46 @@ const Coursre = () => {
     'Business Management': 'Business',
     'Data Science': 'Data Science',
   }
+  const pageFilters = {
+    ...filters,
+    Categories: categoryItems,
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    Promise.allSettled([getCourses(), getCategories()])
+      .then(([coursesResult, categoriesResult]) => {
+        if (!isMounted) return
+
+        if (coursesResult.status === 'fulfilled') {
+          setCourseItems(coursesResult.value)
+        } else {
+          setLoadError(`Courses could not load from /api/courses. ${coursesResult.reason.message}`)
+        }
+
+        if (categoriesResult.status === 'fulfilled') {
+          setCategoryItems(categoriesResult.value.map((item) => item.name))
+        } else if (coursesResult.status === 'fulfilled') {
+          setLoadError(`Categories could not load from /api/categories. ${categoriesResult.reason.message}`)
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const filteredCourses = useMemo(() => {
     const query = search.trim().toLowerCase()
     const selectedCategory = categoryMap[category] || category
 
-    return courses
+    return courseItems
       .filter((course) => {
         const matchesSearch =
           !query ||
@@ -361,7 +100,7 @@ const Coursre = () => {
         if (sortBy === 'Newest') return b.title.localeCompare(a.title)
         return Number(b.students.replace(',', '')) - Number(a.students.replace(',', ''))
       })
-  }, [category, difficulty, priceRange, search, sortBy])
+  }, [category, courseItems, difficulty, priceRange, search, sortBy])
 
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / coursesPerPage))
   const visibleCourses = filteredCourses.slice((page - 1) * coursesPerPage, page * coursesPerPage)
@@ -402,7 +141,11 @@ const Coursre = () => {
             />
           </label>
           <p className="text-sm text-slate-700">
-            Showing <span className="font-black text-slate-950">{filteredCourses.length}</span> courses
+            {isLoading ? 'Loading courses...' : (
+              <>
+                Showing <span className="font-black text-slate-950">{filteredCourses.length}</span> courses
+              </>
+            )}
           </p>
           <div className="flex items-center gap-5 text-sm">
             <span className="text-slate-950">Sort by:</span>
@@ -421,7 +164,7 @@ const Coursre = () => {
 
         <div className="mt-7 grid gap-8 lg:grid-cols-[260px_1fr]">
           <aside className="space-y-9">
-            {Object.entries(filters).map(([title, items]) => (
+            {Object.entries(pageFilters).map(([title, items]) => (
               <div key={title}>
                 <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
                 <div className="mt-5 grid gap-4">
@@ -465,7 +208,7 @@ const Coursre = () => {
                   key={course.title}
                   className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200"
                 >
-                  <a className="block" href="/course-detail">
+                  <a className="block" href={`/course-detail?course=${course.id || ''}#table-card`}>
                     <div className="relative">
                     <img className="h-48 w-full object-cover" src={course.image} alt={course.title} />
                     <span
@@ -478,7 +221,7 @@ const Coursre = () => {
                   <div className="p-6">
                     <a
                       className="card-title-font block min-h-16 text-[1.35rem] font-extrabold leading-snug tracking-normal text-slate-950 transition hover:text-[#302be2]"
-                      href="/course-detail"
+                      href={`/course-detail?course=${course.id || ''}#table-card`}
                     >
                       {course.title}
                     </a>
@@ -513,6 +256,12 @@ const Coursre = () => {
                   Try another search word or choose fewer options.
                 </p>
               </div>
+            )}
+
+            {loadError && (
+              <p className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                Backend courses could not load. {loadError}
+              </p>
             )}
 
             <div className="mt-16 flex justify-center gap-2">

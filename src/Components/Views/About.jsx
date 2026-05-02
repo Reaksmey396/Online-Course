@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowDown,
@@ -6,6 +7,8 @@ import {
   faChalkboardUser,
   faClock,
 } from '@fortawesome/free-solid-svg-icons'
+import { getCourses, getUsers } from '../../lib/courseApi'
+import { getUserRole } from '../../lib/authApi'
 
 const features = [
   {
@@ -25,38 +28,85 @@ const features = [
   },
 ]
 
-const leaders = [
-  {
-    name: 'Dr. Elena Sterling',
-    role: 'Founder & CEO',
-    bio: 'Former MIT Dean with 20 years in EdTech innovation.',
-    image:
-      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    name: 'Marcus Chen',
-    role: 'Head of Curriculum',
-    bio: 'Leading AI researcher specializing in adaptive learning systems.',
-    image:
-      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    name: 'Sarah Jenkins',
-    role: 'UX Director',
-    bio: 'Passionate about creating inclusive digital educational experiences.',
-    image:
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    name: 'David Osei',
-    role: 'VP of Operations',
-    bio: 'Strategist with 15 years experience in scaling global learning platforms.',
-    image:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=700&q=85',
-  },
-]
+const fallbackInstructorImage =
+  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=85'
+
+const getCourseOwnerId = (course) => course.raw?.user_id || course.raw?.instructor_id || course.raw?.teacher_id || course.user_id || course.instructor_id
+
+const normalizeInstructorUser = (user, courses = []) => {
+  const instructorCourses = courses.filter((course) => String(getCourseOwnerId(course)) === String(user.id))
+  const firstCourse = instructorCourses[0]
+
+  return {
+    id: user.id || user.email || user.name,
+    name: user.name || 'Instructor',
+    role: user.specialty || user.expertise || user.category || firstCourse?.category || 'Course Instructor',
+    bio: user.bio || user.description || (instructorCourses.length > 0
+      ? `Teaching ${instructorCourses.length} course${instructorCourses.length === 1 ? '' : 's'} on the platform.`
+      : 'Dedicated instructor on the online course platform.'),
+    image: user.avatar || user.photo || user.profile_photo_url || fallbackInstructorImage,
+  }
+}
+
+const normalizeCourseInstructor = (course) => {
+  const rawInstructor = course.raw?.instructor || course.raw?.teacher || course.raw?.user
+
+  if (rawInstructor && typeof rawInstructor === 'object') {
+    return normalizeInstructorUser(rawInstructor, [course])
+  }
+
+  return {
+    id: getCourseOwnerId(course) || course.instructor || course.title,
+    name: course.instructor || 'Course Instructor',
+    role: course.category || 'Course Instructor',
+    bio: course.title ? `Instructor for ${course.title}.` : 'Dedicated instructor on the online course platform.',
+    image: course.raw?.instructor_avatar || fallbackInstructorImage,
+  }
+}
+
+const uniqueInstructors = (items) => {
+  const seen = new Set()
+
+  return items.filter((item) => {
+    const key = String(item.id || item.name).toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+
+    return true
+  })
+}
 
 const About = () => {
+  const [instructors, setInstructors] = useState([])
+
+  useEffect(() => {
+    let isMounted = true
+
+    Promise.allSettled([getCourses(), getUsers()])
+      .then(([coursesResult, usersResult]) => {
+        if (!isMounted) return
+
+        const courses = coursesResult.status === 'fulfilled' ? coursesResult.value : []
+        const courseInstructors = courses.map(normalizeCourseInstructor)
+        const userInstructors = usersResult.status === 'fulfilled'
+          ? usersResult.value
+            .filter((user) => getUserRole(user) === 'instructor')
+            .map((user) => normalizeInstructorUser(user, courses))
+          : []
+
+        setInstructors(uniqueInstructors([...userInstructors, ...courseInstructors]))
+      })
+      .catch(() => {
+        if (isMounted) {
+          setInstructors([])
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   return (
     <main className="bg-[#f7f8ff] text-slate-950">
       <section className="relative min-h-[560px] overflow-hidden bg-slate-950">
@@ -151,9 +201,9 @@ const About = () => {
           <div className="flex items-end justify-between gap-6">
             <div>
               <p className="text-sm font-bold uppercase tracking-wide text-[#332fe0]">
-                The Leadership
+                The Instructors
               </p>
-              <h2 className="mt-3 text-xl font-semibold">Meet Our Visionaries</h2>
+              <h2 className="mt-3 text-xl font-semibold">Meet Our Instructors</h2>
             </div>
             <a className="text-sm font-semibold text-[#332fe0]" href="#faculty">
               See All Faculty <FontAwesomeIcon className="ml-2" icon={faArrowRight} />
@@ -161,18 +211,23 @@ const About = () => {
           </div>
 
           <div id="faculty" className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {leaders.map((leader) => (
-              <article key={leader.name}>
+            {instructors.map((instructor) => (
+              <article key={instructor.id || instructor.name}>
                 <img
                   className="h-72 w-full rounded-lg object-cover object-top"
-                  src={leader.image}
-                  alt={leader.name}
+                  src={instructor.image}
+                  alt={instructor.name}
                 />
-                <h3 className="mt-5 font-semibold">{leader.name}</h3>
-                <p className="mt-1 text-sm font-medium text-[#332fe0]">{leader.role}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{leader.bio}</p>
+                <h3 className="mt-5 text-center font-semibold">{instructor.name}</h3>
+                <p className="mt-1 text-center text-sm font-medium text-[#332fe0]">{instructor.role}</p>
+                <p className="mt-2  px-3 text-sm leading-6 text-slate-600">{instructor.bio}</p>
               </article>
             ))}
+            {instructors.length === 0 && (
+              <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm font-semibold text-slate-500 sm:col-span-2 lg:col-span-4">
+                No instructors found yet.
+              </p>
+            )}
           </div>
         </div>
       </section>

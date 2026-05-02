@@ -30,7 +30,20 @@ const permissions = [
   ['Revenue Access', 'Show financial dashboards to senior admins'],
 ]
 
-const SettingsPage = () => (
+const matchesSearch = (query, values) => !query || values.join(' ').toLowerCase().includes(query)
+
+const SettingsPage = ({ searchQuery = '' }) => {
+  const normalizedSearch = searchQuery.trim().toLowerCase()
+  const filteredQuickSettings = quickSettings.filter((item) => matchesSearch(normalizedSearch, [item.title, item.text]))
+  const filteredPermissions = permissions.filter((permission) => matchesSearch(normalizedSearch, permission))
+  const footerSettings = [
+    ['Theme', 'Customize colors and dashboard appearance.', faPalette],
+    ['Localization', 'Manage language and regional settings.', faGlobe],
+    ['Billing Rules', 'Set revenue sharing and payout defaults.', faCreditCard],
+  ]
+  const filteredFooterSettings = footerSettings.filter((item) => matchesSearch(normalizedSearch, item.slice(0, 2)))
+
+  return (
   <div className="px-5 py-8 xl:px-8">
     <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
       <AdminPageHeader title="Settings" text="Configure platform preferences and admin controls." />
@@ -41,7 +54,7 @@ const SettingsPage = () => (
     </div>
 
     <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-      {quickSettings.map((item) => (
+      {filteredQuickSettings.map((item) => (
         <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-lg shadow-slate-200/50" key={item.title}>
           <div className="flex items-start justify-between gap-4">
             <span className={`flex h-12 w-12 items-center justify-center rounded-xl text-xl ${item.color}`}>
@@ -114,7 +127,9 @@ const SettingsPage = () => (
             </div>
           </div>
           <div className="mt-6 grid gap-4">
-            {['Two-factor authentication', 'Require strong passwords', 'Auto logout after inactivity'].map((item) => (
+            {['Two-factor authentication', 'Require strong passwords', 'Auto logout after inactivity']
+              .filter((item) => matchesSearch(normalizedSearch, ['Security', item]))
+              .map((item) => (
               <div className="flex items-center justify-between rounded-xl bg-slate-50 p-4" key={item}>
                 <span className="font-semibold text-slate-700">{item}</span>
                 <FontAwesomeIcon className="text-2xl text-violet-600" icon={faToggleOn} />
@@ -152,7 +167,7 @@ const SettingsPage = () => (
       </div>
 
       <div className="mt-6 grid gap-4">
-        {permissions.map((permission) => (
+        {filteredPermissions.map((permission) => (
           <article className="flex flex-col gap-4 rounded-xl border border-slate-100 bg-slate-50 p-5 md:flex-row md:items-center md:justify-between" key={permission[0]}>
             <div>
               <h3 className="font-black">{permission[0]}</h3>
@@ -165,11 +180,7 @@ const SettingsPage = () => (
     </section>
 
     <section className="mt-8 grid gap-5 md:grid-cols-3">
-      {[
-        ['Theme', 'Customize colors and dashboard appearance.', faPalette],
-        ['Localization', 'Manage language and regional settings.', faGlobe],
-        ['Billing Rules', 'Set revenue sharing and payout defaults.', faCreditCard],
-      ].map((item) => (
+      {filteredFooterSettings.map((item) => (
         <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/50" key={item[0]}>
           <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-xl text-violet-700">
             <FontAwesomeIcon icon={item[2]} />
@@ -180,6 +191,7 @@ const SettingsPage = () => (
       ))}
     </section>
   </div>
-)
+  )
+}
 
 export default SettingsPage

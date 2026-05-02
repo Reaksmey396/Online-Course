@@ -1,6 +1,24 @@
 import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBars, faMoon, faSun, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { faBars, faCartShopping, faMoon, faSun, faXmark } from '@fortawesome/free-solid-svg-icons'
+import { getCurrentUser, logout } from '../../lib/authApi'
+
+const isUserCartItem = (item, user) => {
+  if (!user) return false
+
+  return String(item.student_id || '') === String(user.id || '')
+    || String(item.student_email || '').toLowerCase() === String(user.email || '').toLowerCase()
+}
+
+const getCartCount = (user = null) => {
+  try {
+    const cartItems = JSON.parse(localStorage.getItem('course_cart') || '[]')
+
+    return user ? cartItems.filter((item) => isUserCartItem(item, user)).length : 0
+  } catch {
+    return 0
+  }
+}
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -13,6 +31,10 @@ const Navbar = () => {
 
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
+  const [user, setUser] = useState(null)
+  const [isAuthChecking, setIsAuthChecking] = useState(true)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [cartCount, setCartCount] = useState(0)
   const pathname = window.location.pathname
   const linkClass = (path) =>
     `py-5 transition hover:text-[#2d2be8] dark:hover:text-indigo-300 ${
@@ -31,6 +53,109 @@ const Navbar = () => {
     document.documentElement.classList.toggle('dark', isDarkMode)
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light')
   }, [isDarkMode])
+
+  useEffect(() => {
+    let isMounted = true
+
+    getCurrentUser()
+      .then((currentUser) => {
+        if (isMounted) {
+          setUser(currentUser)
+          setCartCount(getCartCount(currentUser))
+          setIsAuthChecking(false)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setUser(null)
+          setCartCount(0)
+          setIsAuthChecking(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const updateCartCount = () => setCartCount(getCartCount(user))
+
+    window.addEventListener('storage', updateCartCount)
+    window.addEventListener('focus', updateCartCount)
+
+    return () => {
+      window.removeEventListener('storage', updateCartCount)
+      window.removeEventListener('focus', updateCartCount)
+    }
+  }, [user])
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+
+    try {
+      await logout()
+    } finally {
+      setUser(null)
+      window.location.href = '/login'
+    }
+  }
+
+  const authButton = isAuthChecking && !user ? (
+    <span className="inline-block h-5 w-14" aria-hidden="true" />
+  ) : user ? (
+    <button
+      className="text-sm font-medium text-slate-500 hover:text-[#2d2be8] disabled:cursor-not-allowed disabled:text-slate-400 dark:text-slate-300 dark:hover:text-indigo-300"
+      disabled={isLoggingOut}
+      onClick={handleLogout}
+      type="button"
+    >
+      {isLoggingOut ? 'Logging out...' : 'Logout'}
+    </button>
+  ) : (
+    <a className="text-sm font-medium text-slate-500 hover:text-[#2d2be8] dark:text-slate-300 dark:hover:text-indigo-300" href="/login">
+      Login
+    </a>
+  )
+
+  const mobileAuthButton = isAuthChecking && !user ? (
+    <span className="block h-12" aria-hidden="true" />
+  ) : user ? (
+    <button
+      className="rounded-lg border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:border-[#2d2be8] hover:text-[#2d2be8] disabled:cursor-not-allowed disabled:text-slate-400 dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:hover:border-indigo-300 dark:hover:text-indigo-100"
+      disabled={isLoggingOut}
+      onClick={handleLogout}
+      type="button"
+    >
+      {isLoggingOut ? 'Logging out...' : 'Logout'}
+    </button>
+  ) : (
+    <a
+      className="rounded-lg border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:border-[#2d2be8] hover:text-[#2d2be8] dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:hover:border-indigo-300 dark:hover:text-indigo-100"
+      href="/login"
+    >
+      Login
+    </a>
+  )
+  const cartButton = user ? (
+    <a
+      className={`relative flex h-10 w-10 items-center justify-center rounded-lg border transition ${
+        pathname === '/cart'
+          ? 'border-[#2d2be8] bg-[#edf0ff] text-[#2d2be8] dark:border-indigo-300 dark:bg-indigo-400/18 dark:text-indigo-100'
+          : 'border-slate-200 text-slate-700 hover:border-[#2d2be8] hover:text-[#2d2be8] dark:border-slate-600 dark:bg-slate-700/70 dark:text-indigo-100 dark:hover:border-indigo-300 dark:hover:text-indigo-100'
+      }`}
+      href="/cart"
+      aria-label="Open cart list"
+      title="Cart list"
+    >
+      <FontAwesomeIcon icon={faCartShopping} />
+      {cartCount > 0 && (
+        <span className="absolute -right-2 -top-2 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white">
+          {cartCount}
+        </span>
+      )}
+    </a>
+  ) : null
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur transition-colors dark:border-slate-700 dark:bg-[#1b273a]/95">
@@ -58,6 +183,7 @@ const Navbar = () => {
         </div>
 
         <div className="hidden items-center gap-5 md:flex">
+          {cartButton}
           <button
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:border-[#2d2be8] hover:text-[#2d2be8] dark:border-slate-600 dark:bg-slate-700/70 dark:text-indigo-100 dark:hover:border-indigo-300 dark:hover:text-indigo-100"
             type="button"
@@ -67,12 +193,11 @@ const Navbar = () => {
           >
             <FontAwesomeIcon icon={isDarkMode ? faSun : faMoon} />
           </button>
-          <a className="hidden text-sm font-medium text-slate-500 hover:text-[#2d2be8] dark:text-slate-300 dark:hover:text-indigo-300 sm:inline" href="/login">
-            Login
-          </a>
+          {authButton}
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
+          {cartButton}
           <button
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 transition hover:border-[#2d2be8] hover:text-[#2d2be8] dark:border-slate-600 dark:bg-slate-700/70 dark:text-indigo-100 dark:hover:border-indigo-300 dark:hover:text-indigo-100"
             type="button"
@@ -145,12 +270,7 @@ const Navbar = () => {
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 grid gap-3 border-t border-slate-200 p-5 dark:border-slate-700">
-              <a
-                className="rounded-lg border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:border-[#2d2be8] hover:text-[#2d2be8] dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:hover:border-indigo-300 dark:hover:text-indigo-100"
-                href="/login"
-              >
-                Login
-              </a>
+              {mobileAuthButton}
             </div>
           </aside>
         </>

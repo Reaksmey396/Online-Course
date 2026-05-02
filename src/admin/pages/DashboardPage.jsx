@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowUp,
@@ -9,66 +10,336 @@ import {
   faUserGroup,
 } from '@fortawesome/free-solid-svg-icons'
 import AdminPageHeader from './AdminPageHeader'
+import { getCourses, getEnrollments, getPayments, getUsers } from '../../lib/courseApi'
+import { getUserRole } from '../../lib/authApi'
 
 const stats = [
-  { title: 'Total Courses', value: '120', growth: '12%', icon: faBookOpen, color: 'from-violet-500 to-indigo-600' },
-  { title: 'Total Students', value: '8,540', growth: '18%', icon: faUserGroup, color: 'from-sky-500 to-blue-600' },
-  { title: 'Total Sales', value: '$24,680', growth: '22%', icon: faCartShopping, color: 'from-amber-400 to-orange-500' },
-  { title: 'Total Reviews', value: '1,248', growth: '15%', icon: faStar, color: 'from-rose-400 to-pink-600' },
+  { title: 'Total Courses', value: '0', growth: '0%', icon: faBookOpen, color: 'from-violet-500 to-indigo-600' },
+  { title: 'Total Students', value: '0', growth: '0%', icon: faUserGroup, color: 'from-sky-500 to-blue-600' },
+  { title: 'Total Sales', value: '$0', growth: '0%', icon: faCartShopping, color: 'from-amber-400 to-orange-500' },
+  { title: 'Total Reviews', value: '0', growth: '0%', icon: faStar, color: 'from-rose-400 to-pink-600' },
 ]
 
-const topCourses = [
-  ['Web Development Bootcamp', '1,540 students', '$12,500', 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=220&q=80'],
-  ['UI/UX Design Masterclass', '1,230 students', '$9,450', 'https://images.unsplash.com/photo-1545235617-9465d2a55698?auto=format&fit=crop&w=220&q=80'],
-  ['Python Programming A-Z', '980 students', '$8,200', 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=220&q=80'],
-  ['Digital Marketing Course', '870 students', '$7,300', 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=220&q=80'],
-]
+const topCourses = []
+const students = []
 
-const students = [
-  ['Sarah Johnson', 'sarah.johnson@example.com', 'Web Development', 'May 31, 2024'],
-  ['Michael Brown', 'michael.brown@example.com', 'UI/UX Design', 'May 30, 2024'],
-  ['Emily Davis', 'emily.davis@example.com', 'Python Programming', 'May 29, 2024'],
-  ['David Wilson', 'david.wilson@example.com', 'Digital Marketing', 'May 28, 2024'],
-]
+const chartMonthLabels = ['Jan', 'Feb', 'Mar', 'April', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const chartBounds = { left: 56, right: 844, top: 48, bottom: 288 }
+const chartRangeOptions = ['Hour', 'Day', 'Week', 'Month']
 
-const chartMonths = ['Jan', 'Feb', 'Mar', 'April', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const chartGrid = ['80Hr', '60Hr', '40Hr', '20Hr', '0Hr']
-const chartBounds = { left: 56, right: 844, top: 48, bottom: 288, max: 80 }
+const currentYear = new Date().getFullYear()
+const previousYear = currentYear - 1
+const currentMonthIndex = new Date().getMonth()
+const currentYearStudents = Array(12).fill(0)
+const previousYearStudents = Array(12).fill(0)
 
-// Change these monthly values to control the graph's increases and decreases.
-const studyHours = [4, 14, 35, 48, 27, 34, 3, 8, 1, 10, 27, 17]
-const testHours = [8, 24, 14, 58, 39, 24, 38, 16, 48, 60, 47, 7]
+const getChartMax = (series) => {
+  const values = series
+    .flatMap((item) => item.values)
+    .filter((value) => Number.isFinite(value))
+  const highestValue = Math.max(...values, 1)
 
-const getChartPoints = (values) => {
-  const xStep = (chartBounds.right - chartBounds.left) / (chartMonths.length - 1)
+  return Math.max(5, Math.ceil(highestValue / 5) * 5)
+}
+
+const getChartGrid = (max) => Array.from({ length: 5 }, (_, index) => {
+  const value = Math.round(max - (max / 4) * index)
+  return value.toLocaleString()
+})
+
+const getChartPoints = (values, labels, max) => {
+  const xStep = labels.length > 1 ? (chartBounds.right - chartBounds.left) / (labels.length - 1) : 0
 
   return values.map((value, index) => ({
-    month: chartMonths[index],
+    label: labels[index],
     value,
     x: chartBounds.left + index * xStep,
-    y: chartBounds.bottom - (value / chartBounds.max) * (chartBounds.bottom - chartBounds.top),
+    y: Number.isFinite(value)
+      ? chartBounds.bottom - (value / max) * (chartBounds.bottom - chartBounds.top)
+      : null,
+    isPlotted: Number.isFinite(value),
   }))
 }
 
-const getSmoothPath = (points) => points.reduce((path, point, index) => {
+const getSmoothPath = (points) => points.filter((point) => point.isPlotted).reduce((path, point, index, plottedPoints) => {
   if (index === 0) {
     return `M${point.x},${point.y}`
   }
 
-  const previous = points[index - 1]
+  const previous = plottedPoints[index - 1]
   const controlDistance = (point.x - previous.x) * 0.42
 
   return `${path} C${previous.x + controlDistance},${previous.y} ${point.x - controlDistance},${point.y} ${point.x},${point.y}`
 }, '')
 
-const getAreaPath = (points) => `${getSmoothPath(points)} L${chartBounds.right},298 L${chartBounds.left},298 Z`
+const getAreaPath = (points) => {
+  const plottedPoints = points.filter((point) => point.isPlotted)
 
-const chartSeries = [
-  { label: 'Study', color: '#0fb7bb', areaId: 'studyArea', points: getChartPoints(studyHours) },
-  { label: 'Test', color: '#ff8a4c', areaId: 'testArea', points: getChartPoints(testHours) },
+  if (plottedPoints.length === 0) return ''
+
+  return `${getSmoothPath(plottedPoints)} L${plottedPoints.at(-1).x},298 L${plottedPoints[0].x},298 Z`
+}
+
+const limitToPastAndCurrentMonths = (values) => values.map((value, index) => (
+  index <= currentMonthIndex ? value : null
+))
+
+const defaultChartValues = [
+  { label: `${currentYear}`, color: '#1887ff', areaId: 'studentArea', values: limitToPastAndCurrentMonths(currentYearStudents).slice(0, currentMonthIndex + 1), dashed: false },
+  { label: `${previousYear}`, color: '#ff3b45', areaId: 'previousStudentArea', values: limitToPastAndCurrentMonths(previousYearStudents).slice(0, currentMonthIndex + 1), dashed: true },
 ]
 
-const DashboardPage = () => (
+const defaultChartLabels = chartMonthLabels.slice(0, currentMonthIndex + 1)
+
+const getRecordDate = (item, fields) => {
+  const rawDate = fields.map((field) => item?.[field]).find(Boolean)
+  const date = rawDate ? new Date(rawDate) : null
+
+  return date && !Number.isNaN(date.getTime()) ? date : null
+}
+
+const addTime = (date, range, amount) => {
+  const nextDate = new Date(date)
+
+  if (range === 'Hour') nextDate.setHours(nextDate.getHours() + amount)
+  if (range === 'Day') nextDate.setDate(nextDate.getDate() + amount)
+  if (range === 'Week') nextDate.setDate(nextDate.getDate() + (amount * 7))
+  if (range === 'Month') nextDate.setMonth(nextDate.getMonth() + amount)
+
+  return nextDate
+}
+
+const endOfBucket = (date, range) => {
+  const nextDate = new Date(date)
+
+  if (range === 'Hour') nextDate.setMinutes(59, 59, 999)
+  if (range === 'Day') nextDate.setHours(23, 59, 59, 999)
+  if (range === 'Week') nextDate.setDate(nextDate.getDate() + 6)
+  if (range === 'Week') nextDate.setHours(23, 59, 59, 999)
+  if (range === 'Month') nextDate.setMonth(nextDate.getMonth() + 1, 0)
+  if (range === 'Month') nextDate.setHours(23, 59, 59, 999)
+
+  return nextDate
+}
+
+const startOfBucket = (date, range) => {
+  const nextDate = new Date(date)
+
+  if (range === 'Hour') nextDate.setMinutes(0, 0, 0)
+  if (range === 'Day') nextDate.setHours(0, 0, 0, 0)
+  if (range === 'Week') {
+    const day = nextDate.getDay()
+    nextDate.setDate(nextDate.getDate() - day)
+    nextDate.setHours(0, 0, 0, 0)
+  }
+  if (range === 'Month') {
+    nextDate.setDate(1)
+    nextDate.setHours(0, 0, 0, 0)
+  }
+
+  return nextDate
+}
+
+const formatChartLabel = (date, range) => {
+  if (range === 'Hour') {
+    return date.toLocaleTimeString([], { hour: '2-digit' })
+  }
+
+  if (range === 'Day') {
+    return date.toLocaleDateString([], { weekday: 'short' })
+  }
+
+  if (range === 'Week') {
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  }
+
+  return chartMonthLabels[date.getMonth()]
+}
+
+const getBucketCount = (range) => {
+  if (range === 'Hour') return 12
+  if (range === 'Day') return 7
+  if (range === 'Week') return 8
+
+  return currentMonthIndex + 1
+}
+
+const getCurrentBucketStarts = (range) => {
+  const bucketCount = getBucketCount(range)
+  const currentBucket = startOfBucket(new Date(), range)
+
+  if (range === 'Month') {
+    return Array.from({ length: bucketCount }, (_, index) => {
+      const date = new Date(currentYear, index, 1)
+      date.setHours(0, 0, 0, 0)
+      return date
+    })
+  }
+
+  return Array.from({ length: bucketCount }, (_, index) => (
+    addTime(currentBucket, range, index - bucketCount + 1)
+  ))
+}
+
+const getStudentTotalsForBuckets = (users, bucketStarts, range) => bucketStarts.map((bucketStart) => {
+  const bucketEnd = endOfBucket(bucketStart, range)
+
+  return users.filter((user) => {
+    const date = getRecordDate(user, ['created_at', 'email_verified_at', 'updated_at'])
+    return date && date <= bucketEnd
+  }).length
+})
+
+const buildStudentChart = (users, range) => {
+  const currentBuckets = getCurrentBucketStarts(range)
+  const previousBuckets = range === 'Month'
+    ? currentBuckets.map((date) => new Date(previousYear, date.getMonth(), 1))
+    : currentBuckets.map((date) => addTime(date, range, -currentBuckets.length))
+
+  return {
+    labels: currentBuckets.map((date) => formatChartLabel(date, range)),
+    series: [
+      { ...defaultChartValues[0], label: range === 'Month' ? `${currentYear}` : 'Current', values: getStudentTotalsForBuckets(users, currentBuckets, range) },
+      { ...defaultChartValues[1], label: range === 'Month' ? `${previousYear}` : 'Previous', values: getStudentTotalsForBuckets(users, previousBuckets, range) },
+    ],
+  }
+}
+
+const buildEmptyStudentChart = (range) => {
+  const labels = getCurrentBucketStarts(range).map((date) => formatChartLabel(date, range))
+  const emptyValues = Array(labels.length).fill(0)
+
+  return {
+    labels,
+    series: [
+      { ...defaultChartValues[0], label: range === 'Month' ? `${currentYear}` : 'Current', values: emptyValues },
+      { ...defaultChartValues[1], label: range === 'Month' ? `${previousYear}` : 'Previous', values: emptyValues },
+    ],
+  }
+}
+
+const getCourseViewerCount = (course, enrollments, payments) => {
+  const courseId = String(course.id || course.raw?.id || '')
+  const viewerKeys = new Set()
+
+  enrollments
+    .filter((item) => String(item.course_id || item.course?.id || '') === courseId)
+    .forEach((item) => {
+      viewerKeys.add(String(item.user_id || item.user?.id || item.user?.email || item.id))
+    })
+
+  payments
+    .filter((item) => String(item.course_id || item.course?.id || '') === courseId)
+    .forEach((item) => {
+      viewerKeys.add(String(item.user_id || item.user?.id || item.user?.email || item.id))
+    })
+
+  if (viewerKeys.size > 0) return viewerKeys.size
+
+  return Number(String(course.students || course.raw?.students_count || course.raw?.enrollments_count || 0).replace(/,/g, '')) || 0
+}
+
+const getStudentUsers = (users) => users.filter((user) => getUserRole(user) === 'student')
+
+const DashboardPage = ({ searchQuery = '' }) => {
+  const [dashboardCourses, setDashboardCourses] = useState(topCourses)
+  const [dashboardStudents, setDashboardStudents] = useState(students)
+  const [dashboardStats, setDashboardStats] = useState(stats)
+  const [dashboardUsers, setDashboardUsers] = useState([])
+  const [activeChartRange, setActiveChartRange] = useState('Month')
+  const [dashboardChartValues, setDashboardChartValues] = useState(defaultChartValues)
+  const [dashboardChartLabels, setDashboardChartLabels] = useState(defaultChartLabels)
+  const chartMax = getChartMax(dashboardChartValues)
+  const chartGrid = getChartGrid(chartMax)
+  const chartSeries = dashboardChartValues.map((series) => ({
+    ...series,
+    points: getChartPoints(series.values, dashboardChartLabels, chartMax),
+  }))
+  const normalizedSearch = searchQuery.trim().toLowerCase()
+  const filteredDashboardCourses = normalizedSearch
+    ? dashboardCourses.filter((course) => course.join(' ').toLowerCase().includes(normalizedSearch))
+    : dashboardCourses
+  const filteredDashboardStudents = normalizedSearch
+    ? dashboardStudents.filter((student) => student.join(' ').toLowerCase().includes(normalizedSearch))
+    : dashboardStudents
+
+  const updateStudentChart = (users, range) => {
+    const chart = users.length > 0
+      ? buildStudentChart(users, range)
+      : buildEmptyStudentChart(range)
+
+    setDashboardChartLabels(chart.labels)
+    setDashboardChartValues(chart.series)
+  }
+
+  const handleChartRangeChange = (range) => {
+    setActiveChartRange(range)
+    updateStudentChart(dashboardUsers, range)
+  }
+
+  useEffect(() => {
+    let isMounted = true
+
+    Promise.all([getCourses(), getUsers(), getPayments(), getEnrollments()])
+      .then(([courses, users, payments, enrollments]) => {
+        if (!isMounted) return
+
+        if (courses.length > 0) {
+          setDashboardCourses(courses
+            .map((course) => ({
+              course,
+              viewers: getCourseViewerCount(course, enrollments, payments),
+            }))
+            .sort((a, b) => b.viewers - a.viewers)
+            .slice(0, 4)
+            .map(({ course, viewers }) => [
+              course.title,
+              `${viewers.toLocaleString()} ${viewers === 1 ? 'Viewer' : 'Viewers'}`,
+              course.price,
+              course.image,
+            ]))
+        }
+
+        const studentUsers = getStudentUsers(users)
+
+        if (studentUsers.length > 0) {
+          setDashboardUsers(studentUsers)
+          setDashboardStudents(studentUsers.slice(0, 4).map((user) => [
+            user.name || 'Student',
+            user.email || 'No email',
+            user.course?.title || 'Online Course',
+            user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown',
+          ]))
+        }
+
+        setDashboardStats([
+          { ...stats[0], value: courses.length.toLocaleString() },
+          { ...stats[1], value: studentUsers.length.toLocaleString() },
+          { ...stats[2], value: `$${payments.reduce((total, payment) => total + Number(payment.amount || payment.price || 0), 0).toLocaleString()}` },
+          stats[3],
+        ])
+
+        if (studentUsers.length > 0) {
+          updateStudentChart(studentUsers, activeChartRange)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setDashboardCourses([])
+          setDashboardStudents([])
+          setDashboardStats(stats)
+          setDashboardUsers([])
+          setDashboardChartLabels(defaultChartLabels)
+          setDashboardChartValues(defaultChartValues)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  return (
   <div className="px-5 py-8 xl:px-8">
     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
       <AdminPageHeader title="Dashboard" text="Welcome back, Admin! Here is what is happening on your platform." />
@@ -80,7 +351,7 @@ const DashboardPage = () => (
     </div>
 
     <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {stats.map((stat) => (
+      {dashboardStats.map((stat) => (
         <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-md shadow-slate-200/50" key={stat.title}>
           <div className="flex items-center gap-4">
             <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${stat.color} text-xl text-white shadow-md`}>
@@ -103,34 +374,53 @@ const DashboardPage = () => (
     </div>
 
     <div className="mt-6 grid gap-6 2xl:grid-cols-[1fr_480px]">
-      <section className="rounded-2xl border border-cyan-50 bg-white p-5 shadow-lg shadow-cyan-100/60">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-xl font-black text-slate-950">Study Statistics</h2>
-          <div className="flex items-center gap-5 text-sm text-slate-500">
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#0fb7bb]" /> Study</span>
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#ff8a4c]" /> Test</span>
-            <button className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-500 shadow-sm" type="button">
-              Monthly
-              <FontAwesomeIcon className="text-xs" icon={faChevronDown} />
-            </button>
+      <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-lg shadow-slate-200/60">
+        <div className="flex flex-col gap-5 border-b border-slate-100 pb-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-black  tracking-wide text-violet-600">Students Overview</p>
+            <h2 className="mt-1 text-xl font-black text-slate-950">Time vs Total Students</h2>
+            <p className="mt-1 text-sm text-slate-500">Compare student growth by selected time range.</p>
+          </div>
+
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="grid grid-cols-4 rounded-xl bg-slate-100 p-1">
+              {chartRangeOptions.map((item) => (
+                <button
+                  className={`h-10 rounded-lg px-4 text-xs font-black transition ${item === activeChartRange ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-100' : 'text-slate-500 hover:bg-white hover:text-slate-800'}`}
+                  key={item}
+                  onClick={() => handleChartRangeChange(item)}
+                  type="button"
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-black  text-slate-500">
+              {chartSeries.map((series) => (
+                <span className="inline-flex items-center gap-2" key={series.label}>
+                  <span className="h-1 w-7 rounded-full" style={{ backgroundColor: series.color }} />
+                  {series.label}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="mt-7 h-80 overflow-hidden">
-          <svg className="h-full w-full" viewBox="0 0 860 320" preserveAspectRatio="none" role="img" aria-label="Study and test hours by month">
+        <div className="mt-5 h-80 overflow-hidden">
+          <svg className="h-full w-full" viewBox="0 0 860 320" preserveAspectRatio="none" role="img" aria-label={`Total students by ${activeChartRange.toLowerCase()} compared with the previous period`}>
             <defs>
-              <linearGradient id="studyArea" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#0fb7bb" stopOpacity="0.48" />
-                <stop offset="100%" stopColor="#0fb7bb" stopOpacity="0.04" />
+              <linearGradient id="studentArea" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#1887ff" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="#1887ff" stopOpacity="0.02" />
               </linearGradient>
-              <linearGradient id="testArea" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#ff8a4c" stopOpacity="0.42" />
-                <stop offset="100%" stopColor="#ff8a4c" stopOpacity="0.03" />
+              <linearGradient id="previousStudentArea" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#ff3b45" stopOpacity="0.10" />
+                <stop offset="100%" stopColor="#ff3b45" stopOpacity="0.01" />
               </linearGradient>
             </defs>
 
             {[48, 98, 148, 198, 248].map((y) => (
-              <line key={y} x1="54" x2="838" y1={y} y2={y} stroke="#edf2f7" strokeDasharray="3 4" />
+              <line key={y} x1="54" x2="838" y1={y} y2={y} stroke="#eef2f7" />
             ))}
 
             {chartGrid.map((label, index) => (
@@ -139,47 +429,52 @@ const DashboardPage = () => (
               </text>
             ))}
 
-            {chartSeries.map((series) => (
-              <path key={`${series.label}-area`} d={getAreaPath(series.points)} fill={`url(#${series.areaId})`} />
-            ))}
+            {chartSeries.map((series) => {
+              const areaPath = getAreaPath(series.points)
 
-            {chartSeries.map((series) => (
-              <path
-                key={`${series.label}-line`}
-                d={getSmoothPath(series.points)}
-                fill="none"
-                stroke={series.color}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2.5"
-              />
-            ))}
+              return areaPath ? (
+                <path key={`${series.label}-area`} d={areaPath} fill={`url(#${series.areaId})`} />
+              ) : null
+            })}
 
-            {chartSeries.flatMap((series) => series.points.map((point, index) => {
-              const previousValue = series.points[index - 1]?.value ?? point.value
+            {chartSeries.map((series) => {
+              const linePath = getSmoothPath(series.points)
+
+              return linePath ? (
+                <path
+                  key={`${series.label}-line`}
+                  d={linePath}
+                  fill="none"
+                  stroke={series.color}
+                  strokeDasharray={series.dashed ? '7 7' : undefined}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.8"
+                />
+              ) : null
+            })}
+
+            {chartSeries.flatMap((series) => series.points.filter((point) => point.isPlotted).map((point, index, plottedPoints) => {
+              const previousValue = plottedPoints[index - 1]?.value ?? point.value
               const trend = point.value - previousValue
-              const trendText = trend > 0 ? `increased ${trend}Hr` : trend < 0 ? `decreased ${Math.abs(trend)}Hr` : 'no change'
+              const trendText = trend > 0 ? `increased by ${trend}` : trend < 0 ? `decreased by ${Math.abs(trend)}` : 'no change'
 
               return (
-                <circle key={`${series.label}-${point.month}`} cx={point.x} cy={point.y} r="4" fill={series.color} stroke="#ffffff" strokeWidth="2">
-                  <title>{`${series.label} ${point.month}: ${point.value}Hr, ${trendText}`}</title>
+                <circle key={`${series.label}-${point.label}`} cx={point.x} cy={point.y} r={series.dashed ? '0' : '4.8'} fill="#ffffff" stroke={series.color} strokeWidth="2.5">
+                  <title>{`${series.label} ${point.label}: ${point.value.toLocaleString()} total students, ${trendText}`}</title>
                 </circle>
               )
             }))}
 
-            <g>
-              <rect x="350" y="68" width="74" height="56" rx="8" fill="#ffffff" stroke="#edf2f7" />
-              <text x="382" y="88" fill="#334155" fontSize="13" fontWeight="600">Study</text>
-              <text x="382" y="108" fill="#334155" fontSize="13" fontWeight="600">Test</text>
-              <rect x="362" y="78" width="8" height="8" rx="2" fill="#0fb7bb" />
-              <rect x="362" y="98" width="8" height="8" rx="2" fill="#ff8a4c" />
-            </g>
+            {dashboardChartLabels.map((label, index) => {
+              const xStep = dashboardChartLabels.length > 1 ? (chartBounds.right - chartBounds.left) / (dashboardChartLabels.length - 1) : 0
 
-            {chartMonths.map((month, index) => (
-              <text key={month} x={60 + index * 72} y="316" fill="#6b7280" fontSize="13" fontWeight="600" textAnchor="middle">
-                {month}
+              return (
+              <text key={`${label}-${index}`} x={chartBounds.left + index * xStep} y="316" fill="#6b7280" fontSize="13" fontWeight="600" textAnchor="middle">
+                {label}
               </text>
-            ))}
+              )
+            })}
           </svg>
         </div>
       </section>
@@ -190,7 +485,7 @@ const DashboardPage = () => (
           <a className="text-sm font-semibold text-violet-600" href="#top">View all</a>
         </div>
         <div className="mt-7 grid gap-6">
-          {topCourses.map((course, index) => (
+          {filteredDashboardCourses.map((course, index) => (
             <article className="grid grid-cols-[36px_72px_minmax(0,1fr)] gap-4 sm:grid-cols-[36px_72px_minmax(0,1fr)_auto] sm:items-center" key={course[0]}>
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 font-black text-violet-600">{index + 1}</span>
               <img className="h-14 w-20 rounded-md object-cover" src={course[3]} alt={course[0]} />
@@ -211,7 +506,7 @@ const DashboardPage = () => (
         <table className="w-full min-w-[700px] text-left text-sm">
           <thead className="text-slate-500"><tr><th className="py-3">Student</th><th>Email</th><th>Course</th><th>Joined Date</th><th>Status</th></tr></thead>
           <tbody className="divide-y divide-slate-100">
-            {students.map((student) => (
+          {filteredDashboardStudents.map((student) => (
               <tr key={student[1]}>
                 <td className="py-4 font-semibold">{student[0]}</td>
                 <td className="text-slate-600">{student[1]}</td>
@@ -225,6 +520,7 @@ const DashboardPage = () => (
       </div>
     </section>
   </div>
-)
+  )
+}
 
 export default DashboardPage

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowUp,
@@ -7,67 +8,106 @@ import {
   faEllipsisVertical,
   faFilter,
   faMagnifyingGlass,
+  faPen,
   faUserGraduate,
 } from '@fortawesome/free-solid-svg-icons'
 import AdminPageHeader from './AdminPageHeader'
+import { getEnrollments, getLessonProgress, getUsers } from '../../lib/courseApi'
+import { getUserRole } from '../../lib/authApi'
 
 const stats = [
-  { label: 'Active Students', value: '8,540', note: '12% from last month', icon: faUserGraduate, color: 'bg-violet-100 text-violet-700' },
-  { label: 'New This Month', value: '1,240', note: '18% from last month', icon: faCalendarCheck, color: 'bg-cyan-100 text-cyan-700' },
-  { label: 'Completion Rate', value: '92%', note: '6% from last month', icon: faCertificate, color: 'bg-emerald-100 text-emerald-700' },
+  { label: 'Active Students', value: '0', note: '0% from last month', icon: faUserGraduate, color: 'bg-violet-100 text-violet-700' },
+  { label: 'New This Month', value: '0', note: '0% from last month', icon: faCalendarCheck, color: 'bg-cyan-100 text-cyan-700' },
+  { label: 'Completion Rate', value: '0%', note: '0% from last month', icon: faCertificate, color: 'bg-emerald-100 text-emerald-700' },
 ]
 
-const students = [
-  {
-    name: 'Sarah Johnson',
-    email: 'sarah.johnson@example.com',
-    course: 'Web Development',
-    progress: '86%',
-    joined: 'May 31, 2024',
-    status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
-  },
-  {
-    name: 'Michael Brown',
-    email: 'michael.brown@example.com',
-    course: 'UI/UX Design',
-    progress: '74%',
-    joined: 'May 30, 2024',
-    status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80',
-  },
-  {
-    name: 'Emily Davis',
-    email: 'emily.davis@example.com',
-    course: 'Python Programming',
-    progress: '48%',
-    joined: 'May 29, 2024',
-    status: 'Review',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-  },
-  {
-    name: 'David Wilson',
-    email: 'david.wilson@example.com',
-    course: 'Digital Marketing',
-    progress: '91%',
-    joined: 'May 28, 2024',
-    status: 'Active',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80',
-  },
-]
+const StudentsPage = ({ searchQuery = '' }) => {
+  const [studentItems, setStudentItems] = useState([])
+  const [progressItems, setProgressItems] = useState([])
+  const [enrollmentItems, setEnrollmentItems] = useState([])
+  const [localSearch, setLocalSearch] = useState('')
 
-const StudentsPage = () => (
+  useEffect(() => {
+    let isMounted = true
+
+    Promise.all([getUsers(), getEnrollments(), getLessonProgress()])
+      .then(([users, enrollments, progress]) => {
+        if (!isMounted) return
+
+        if (users.length > 0) {
+          const studentUsers = users.filter((user) => getUserRole(user) === 'student')
+          const studentUserIds = new Set(studentUsers.map((user) => String(user.id)))
+          const studentEnrollments = enrollments.filter((item) => studentUserIds.has(String(item.user_id)))
+          const studentProgress = progress.filter((item) => studentUserIds.has(String(item.user_id)))
+
+          setStudentItems(studentUsers.map((user) => {
+            const enrollment = enrollments.find((item) => String(item.user_id) === String(user.id))
+            const progressItem = progress.find((item) => String(item.user_id) === String(user.id))
+            const progressValue = progressItem?.progress || progressItem?.percentage || enrollment?.progress || 0
+
+            return {
+              name: user.name || 'Student',
+              email: user.email || 'No email',
+              course: enrollment?.course?.title || enrollment?.course_title || 'No course',
+              progress: `${progressValue}%`,
+              joined: user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown',
+              status: user.status || 'Active',
+              avatar: user.avatar || user.photo || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80',
+            }
+          }))
+
+          setEnrollmentItems(studentEnrollments)
+          setProgressItems(studentProgress)
+        } else {
+          setEnrollmentItems([])
+          setProgressItems([])
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setStudentItems([])
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const dynamicStats = [
+    { ...stats[0], value: studentItems.length.toLocaleString() },
+    { ...stats[1], value: enrollmentItems.length.toLocaleString() },
+    {
+      ...stats[2],
+      value: progressItems.length > 0
+        ? `${Math.round(progressItems.reduce((total, item) => total + Number(item.progress || item.percentage || 0), 0) / progressItems.length)}%`
+        : '0%',
+    },
+  ]
+  const normalizedSearch = (localSearch || searchQuery).trim().toLowerCase()
+  const filteredStudentItems = normalizedSearch
+    ? studentItems.filter((student) => [
+      student.name,
+      student.email,
+      student.course,
+      student.progress,
+      student.joined,
+      student.status,
+    ].join(' ').toLowerCase().includes(normalizedSearch))
+    : studentItems
+
+  return (
   <div className="px-5 py-8 xl:px-8">
     <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
       <AdminPageHeader title="Students" text="Track student enrollments, activity, and account status." />
       <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-violet-600 px-5 text-sm font-black text-white shadow-lg shadow-violet-200" type="button">
-        <FontAwesomeIcon icon={faUserGraduate} />
-        Add Student
+        <FontAwesomeIcon icon={faPen} />
+        Edit Student
       </button>
     </div>
 
     <div className="mt-8 grid gap-5 md:grid-cols-3">
-      {stats.map((stat) => (
+      {dynamicStats.map((stat) => (
         <article className="rounded-2xl border border-slate-100 bg-white p-5 shadow-lg shadow-slate-200/50" key={stat.label}>
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -100,8 +140,10 @@ const StudentsPage = () => (
             <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" icon={faMagnifyingGlass} />
             <input
               className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100 sm:w-72"
+              onChange={(event) => setLocalSearch(event.target.value)}
               placeholder="Search students..."
               type="search"
+              value={localSearch || searchQuery}
             />
           </label>
           <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button">
@@ -124,7 +166,7 @@ const StudentsPage = () => (
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {students.map((student) => (
+            {filteredStudentItems.map((student) => (
               <tr className="hover:bg-slate-50/70" key={student.email}>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
@@ -165,6 +207,7 @@ const StudentsPage = () => (
       </div>
     </section>
   </div>
-)
+  )
+}
 
 export default StudentsPage

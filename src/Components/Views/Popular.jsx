@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowRight,
@@ -8,142 +9,16 @@ import {
   faStar,
   faUsers,
 } from '@fortawesome/free-solid-svg-icons'
+import { getCourses } from '../../lib/courseApi'
 
-const heroStats = [
-  { value: '12.5k+', label: 'New learners' },
-]
+const heroStats = []
+const mostPopular = []
+const topRated = []
 
-const mostPopular = [
-  {
-    badge: 'Best Seller',
-    category: 'Development',
-    title: 'The Complete Full-Stack Web Development Bootcamp 2024',
-    instructor: 'Dr. Angela Yu, Senior Instructor',
-    rating: '4.9',
-    reviews: '12,402',
-    price: '$89.99',
-    oldPrice: '$129.99',
-    image:
-      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    badge: 'Trending',
-    category: 'Design',
-    title: 'Mastering UX/UI: From Wireframe to Interactive Prototype',
-    instructor: 'Sarah Jenkins, Product Designer',
-    rating: '4.8',
-    reviews: '8,110',
-    price: '$74.99',
-    oldPrice: '$99.99',
-    image:
-      'https://images.unsplash.com/photo-1545235617-9465d2a55698?auto=format&fit=crop&w=900&q=85',
-  },
-  {
-    badge: 'Best Seller',
-    category: 'Data Science',
-    title: 'Python for Data Science & Machine Learning Masterclass',
-    instructor: 'Jose Portilla, Head of Data Science',
-    rating: '5.0',
-    reviews: '5,290',
-    price: '$94.99',
-    oldPrice: '$149.99',
-    image:
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=85',
-  },
-]
+const newCourses = []
+const designCourses = []
 
-const topRated = [
-  {
-    title: 'React - The Complete Guide',
-    instructor: 'Maximilian Schwarzmuller',
-    price: '$19.99',
-    rating: '4.8',
-    image:
-      'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    title: 'Python for Beginners 2024',
-    instructor: 'Mosh Hamedani',
-    price: '$15.99',
-    rating: '4.9',
-    image:
-      'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    title: 'AWS Certified Cloud Practitioner',
-    instructor: 'Stephane Maarek',
-    price: '$21.99',
-    rating: '4.7',
-    image:
-      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    title: 'Cyber Security: The Complete Path',
-    instructor: 'Nathan House',
-    price: '$24.99',
-    rating: '4.8',
-    image:
-      'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=700&q=85',
-  },
-]
-
-const newCourses = [
-  {
-    label: 'Brand New',
-    title: 'Generative AI for Creative Professionals',
-    text: 'Learn to leverage LLMs and diffusion models in your design workflow.',
-    price: '$49.99',
-    image:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=500&q=85',
-  },
-  {
-    label: 'Hot Pick',
-    title: 'Solidity 101: Building Secure Smart Contracts',
-    text: 'The complete guide to Ethereum development and blockchain security.',
-    price: '$59.99',
-    image:
-      'https://images.unsplash.com/photo-1642104704074-907c0698cbd9?auto=format&fit=crop&w=500&q=85',
-  },
-]
-
-const designCourses = [
-  {
-    title: 'Graphic Design Masterclass',
-    instructor: 'Lindsay Marsh',
-    price: '$14.99',
-    rating: '4.7',
-    reviews: '4k',
-    image:
-      'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    title: 'Mobile App Design from Scratch',
-    instructor: 'Gary Simon',
-    price: '$16.99',
-    rating: '4.8',
-    reviews: '2.5k',
-    image:
-      'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    title: 'After Effects: Motion Graphics',
-    instructor: 'Daniel Walter Scott',
-    price: '$18.99',
-    rating: '4.8',
-    reviews: '3.8k',
-    image:
-      'https://images.unsplash.com/photo-1558655146-9f40138edfeb?auto=format&fit=crop&w=700&q=85',
-  },
-  {
-    title: 'Design Thinking for Business',
-    instructor: 'IDEO Academy',
-    price: '$29.99',
-    rating: '4.9',
-    reviews: '1.2k',
-    image:
-      'https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=700&q=85',
-  },
-]
+const getCourseDetailUrl = (course) => `/course-detail?course=${course.id || ''}`
 
 const Rating = ({ value, reviews }) => (
   <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-500">
@@ -154,6 +29,42 @@ const Rating = ({ value, reviews }) => (
 )
 
 const Popular = () => {
+  const [backendCourses, setBackendCourses] = useState([])
+
+  useEffect(() => {
+    let isMounted = true
+
+    getCourses()
+      .then((courses) => {
+        if (isMounted) {
+          setBackendCourses(courses)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setBackendCourses([])
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const popularCourses = backendCourses.slice(0, 3).map((course) => ({
+    ...course,
+    badge: course.paid === 'Free' ? 'Free' : 'Popular',
+    reviews: course.students,
+    oldPrice: '',
+  }))
+  const ratedCourses = backendCourses.slice(0, 4)
+  const newCourseItems = backendCourses.slice(0, 2).map((course) => ({
+    ...course,
+    label: course.paid === 'Free' ? 'Free' : 'New',
+    text: course.description || course.category,
+  }))
+  const designItems = backendCourses.filter((course) => course.category === 'Design').slice(0, 4)
+
   return (
     <main className="bg-[#f7f8ff] text-slate-950">
       <section className="bg-[#eaf0ff]">
@@ -223,31 +134,33 @@ const Popular = () => {
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {mostPopular.map((course) => (
-            <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm" key={course.title}>
-              <div className="relative">
-                <img className="h-48 w-full object-cover" src={course.image} alt={course.title} />
-                <span className="absolute left-3 top-3 rounded bg-[#332bdc] px-3 py-1 text-[10px] font-black  text-white">
-                  {course.badge}
-                </span>
-              </div>
-              <div className="p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-[#086e80]">{course.category}</p>
-                  <Rating value={course.rating} reviews={course.reviews} />
+          {popularCourses.map((course) => (
+            <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200" key={course.id || course.title}>
+              <a className="block" href={getCourseDetailUrl(course)}>
+                <div className="relative">
+                  <img className="h-48 w-full object-cover" src={course.image} alt={course.title} />
+                  <span className="absolute left-3 top-3 rounded bg-[#332bdc] px-3 py-1 text-[10px] font-black  text-white">
+                    {course.badge}
+                  </span>
                 </div>
-                <h3 className="mt-4 min-h-12 text-base font-semibold leading-snug">{course.title}</h3>
-                <p className="mt-2 text-xs text-slate-500">{course.instructor}</p>
-                <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-5">
-                  <p>
-                    <span className="font-semibold">{course.price}</span>
-                    <span className="ml-2 text-xs text-slate-400 line-through">{course.oldPrice}</span>
-                  </p>
-                  <button className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f1f4ff] text-[#332bdc]">
+                <div className="p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-[#086e80]">{course.category}</p>
+                    <Rating value={course.rating} reviews={course.reviews} />
+                  </div>
+                  <h3 className="mt-4 min-h-12 text-base font-semibold leading-snug">{course.title}</h3>
+                  <p className="mt-2 text-xs text-slate-500">{course.instructor}</p>
+                  <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-5">
+                    <p>
+                      <span className="font-semibold">{course.price}</span>
+                      {course.oldPrice && <span className="ml-2 text-xs text-slate-400 line-through">{course.oldPrice}</span>}
+                    </p>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f1f4ff] text-[#332bdc]">
                     <FontAwesomeIcon icon={faCartShopping} />
-                  </button>
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </a>
             </article>
           ))}
         </div>
@@ -266,15 +179,17 @@ const Popular = () => {
           </div>
 
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {topRated.map((course) => (
-              <article className="rounded-lg bg-white p-3 shadow-sm" key={course.title}>
-                <img className="h-36 w-full rounded-md object-cover" src={course.image} alt={course.title} />
-                <h3 className="mt-4 text-sm font-semibold">{course.title}</h3>
-                <p className="mt-1 text-xs text-slate-500">{course.instructor}</p>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-[#332bdc]">{course.price}</span>
-                  <Rating value={course.rating} />
-                </div>
+            {ratedCourses.map((course) => (
+              <article className="rounded-lg bg-white p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200" key={course.id || course.title}>
+                <a className="block" href={getCourseDetailUrl(course)}>
+                  <img className="h-36 w-full rounded-md object-cover" src={course.image} alt={course.title} />
+                  <h3 className="mt-4 text-sm font-semibold">{course.title}</h3>
+                  <p className="mt-1 text-xs text-slate-500">{course.instructor}</p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-[#332bdc]">{course.price}</span>
+                    <Rating value={course.rating} />
+                  </div>
+                </a>
               </article>
             ))}
           </div>
@@ -284,24 +199,31 @@ const Popular = () => {
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <h2 className="text-center text-3xl font-black">New & Noteworthy</h2>
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          {newCourses.map((course) => (
-            <article className="grid overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm sm:grid-cols-[180px_1fr]" key={course.title}>
-              <img className="h-52 w-full object-cover sm:h-full" src={course.image} alt={course.title} />
-              <div className="p-6">
-                <span className="rounded bg-[#edf0ff] px-3 py-1 text-[10px] font-black uppercase text-[#332bdc]">
-                  {course.label}
-                </span>
-                <h3 className="mt-4 font-semibold">{course.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{course.text}</p>
-                <div className="mt-5 flex items-center justify-between">
-                  <span className="text-sm">{course.price}</span>
-                  <a className="text-sm font-semibold text-[#332bdc]" href="#design">
+          {newCourseItems.map((course) => (
+            <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200" key={course.id || course.title}>
+              <a className="grid sm:grid-cols-[180px_1fr]" href={getCourseDetailUrl(course)}>
+                <img className="h-52 w-full object-cover sm:h-full" src={course.image} alt={course.title} />
+                <div className="p-6">
+                  <span className="rounded bg-[#edf0ff] px-3 py-1 text-[10px] font-black uppercase text-[#332bdc]">
+                    {course.label}
+                  </span>
+                  <h3 className="mt-4 font-semibold">{course.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{course.text}</p>
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className="text-sm">{course.price}</span>
+                    <span className="text-sm font-semibold text-[#332bdc]">
                     Learn more <FontAwesomeIcon className="ml-1" icon={faArrowRight} />
-                  </a>
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </a>
             </article>
           ))}
+          {newCourseItems.length === 0 && (
+            <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm font-semibold text-slate-500 lg:col-span-2">
+              No course data yet.
+            </p>
+          )}
         </div>
       </section>
 
@@ -311,24 +233,31 @@ const Popular = () => {
           <p className="mt-2 text-sm text-slate-600">Creative skills for the modern digital era.</p>
         </div>
         <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {designCourses.map((course) => (
-            <article key={course.title}>
-              <img className="h-56 w-full rounded-lg object-cover" src={course.image} alt={course.title} />
-              <h3 className="mt-4 text-sm font-semibold">{course.title}</h3>
-              <p className="mt-1 text-xs text-slate-500">{course.instructor}</p>
-              <div className="mt-3">
-                <Rating value={course.rating} reviews={course.reviews} />
-              </div>
-              <p className="mt-3 text-sm font-semibold">{course.price}</p>
+            {designItems.map((course) => (
+            <article className="transition hover:-translate-y-1" key={course.id || course.title}>
+              <a className="block" href={getCourseDetailUrl(course)}>
+                <img className="h-56 w-full rounded-lg object-cover" src={course.image} alt={course.title} />
+                <h3 className="mt-4 text-sm font-semibold">{course.title}</h3>
+                <p className="mt-1 text-xs text-slate-500">{course.instructor}</p>
+                <div className="mt-3">
+                  <Rating value={course.rating} reviews={course.reviews} />
+                </div>
+                <p className="mt-3 text-sm font-semibold">{course.price}</p>
+              </a>
             </article>
           ))}
+          {designItems.length === 0 && (
+            <p className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm font-semibold text-slate-500 sm:col-span-2 lg:col-span-4">
+              No design courses yet.
+            </p>
+          )}
         </div>
       </section>
 
       <section className="bg-[#332bdc] px-4 py-16 text-center text-white sm:px-6 lg:px-8">
         <h2 className="text-3xl font-black">Ready to start learning?</h2>
         <p className="mt-5 text-sm text-indigo-50">
-          Get unlimited access to 10,000+ top courses for your team.
+          Get access to the courses published on your platform.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
           <a className="rounded-md bg-cyan-300 px-8 py-3 text-sm font-bold text-slate-950" href="/contact">

@@ -135,15 +135,15 @@ body {
   }
 }
 
-article :is(
-  h2,
-  h3,
+:is(
   .card-title-font,
+  [class*='font-semibold'],
   [class*='font-bold'],
-  [class*='font-black'],
-  [class*='font-extrabold']
+  [class*='font-extrabold'],
+  [class*='font-black']
 ) {
-  font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+  font-family: "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
 }
 
 html.dark body {

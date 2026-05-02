@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faArrowRight,
@@ -11,56 +12,39 @@ import {
   faUser,
   faUsers,
 } from '@fortawesome/free-solid-svg-icons'
+import { getCategories, getCourses } from '../../lib/courseApi'
 
-const categories = [
-  {
-    icon: faCode,
-    title: 'Development',
-    text: 'Python, React, Blockchain and more.',
-    courses: '120+ Courses',
-  },
-  {
-    icon: faBriefcase,
-    title: 'Business',
-    text: 'Strategy, Finance, Leadership.',
-    courses: '85+ Courses',
-  },
-  {
-    icon: faPalette,
-    title: 'Design',
-    text: 'UI/UX, Branding, Graphic Design.',
-    courses: '94+ Courses',
-  },
-  {
-    icon: faBullhorn,
-    title: 'Marketing',
-    text: 'SEO, Social Media, Content.',
-    courses: '62+ Courses',
-  },
-]
-
-const sideCourses = [
-  {
-    label: 'Design',
-    rating: '4.8',
-    title: 'Mastering UX Design for Enterprise',
-    price: '$49.99',
-    hours: '12.5 Hours',
-    image:
-      'https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    label: 'Marketing',
-    rating: '4.7',
-    title: 'Growth Hacking: Zero to Hero',
-    price: '$59.99',
-    hours: '18.2 Hours',
-    image:
-      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=900&q=80',
-  },
-]
+const categoryIcons = [faCode, faBriefcase, faPalette, faBullhorn]
 
 const Home = () => {
+  const [categories, setCategories] = useState([])
+  const [courses, setCourses] = useState([])
+
+  useEffect(() => {
+    let isMounted = true
+
+    Promise.all([getCategories(), getCourses()])
+      .then(([categoryItems, courseItems]) => {
+        if (!isMounted) return
+
+        setCategories(categoryItems)
+        setCourses(courseItems)
+      })
+      .catch(() => {
+        if (!isMounted) return
+
+        setCategories([])
+        setCourses([])
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const featuredCourse = courses[0]
+  const sideCourses = courses.slice(1, 3)
+
   return (
     <main>
       <section id="courses" className="bg-[#edf2ff] py-14 md:py-16">
@@ -82,19 +66,26 @@ const Home = () => {
           </div>
 
           <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <article
-                key={category.title}
+                key={category.id || category.name}
                 className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200"
               >
                 <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#edf0ff] text-lg font-black text-[#302be2]">
-                  <FontAwesomeIcon icon={category.icon} />
+                  <FontAwesomeIcon icon={categoryIcons[index % categoryIcons.length]} />
                 </span>
-                <h3 className="mt-7 text-base font-semibold text-slate-950">{category.title}</h3>
-                <p className="mt-3 min-h-12 text-sm leading-6 text-slate-600">{category.text}</p>
-                <p className="mt-5 text-sm font-bold text-[#302be2]">{category.courses}</p>
+                <h3 className="mt-7 text-base font-semibold text-slate-950">{category.name}</h3>
+                <p className="mt-3 min-h-12 text-sm leading-6 text-slate-600">{category.description || 'Course category'}</p>
+                <p className="mt-5 text-sm font-bold text-[#302be2]">
+                  {courses.filter((course) => String(course.categoryId) === String(category.id) || course.category === category.name).length} Courses
+                </p>
               </article>
             ))}
+            {categories.length === 0 && (
+              <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-500 sm:col-span-2 lg:col-span-4">
+                No categories yet.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -104,53 +95,59 @@ const Home = () => {
           <p className="text-center text-sm font-medium text-slate-700">Featured Courses</p>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-[2fr_0.95fr]">
+            {featuredCourse ? (
             <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="relative">
                 <img
                   className="h-64 w-full object-cover sm:h-80 lg:h-[400px]"
-                  src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=1300&q=85"
-                  alt="Instructor portrait for the featured React course"
+                  src={featuredCourse.image}
+                  alt={featuredCourse.title}
                 />
                 <span className="absolute left-5 top-5 rounded-full bg-cyan-300 px-4 py-2 text-xs font-bold text-slate-900">
-                  Best Seller
+                  Featured
                 </span>
               </div>
               <div className="grid gap-6 p-6 sm:p-8 md:grid-cols-[1fr_auto]">
                 <div>
                   <div className="flex flex-wrap items-center gap-3 text-xs font-bold">
                     <span className="rounded-full bg-[#edf0ff] px-3 py-1.5 text-[#302be2]">
-                      DEVELOPMENT
+                      {featuredCourse.category}
                     </span>
                     <span className="flex items-center gap-1 text-amber-500">
-                      <FontAwesomeIcon icon={faStar} /> 4.9
+                      <FontAwesomeIcon icon={faStar} /> {featuredCourse.rating}
                     </span>
-                    <span className="text-slate-500">(2.1k reviews)</span>
+                    <span className="text-slate-500">({featuredCourse.students} students)</span>
                   </div>
                   <h3 className="mt-4 text-lg font-semibold text-slate-950">
-                    Advanced React Patterns: Build Scalable Apps
+                    {featuredCourse.title}
                   </h3>
                   <div className="mt-6 flex items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500 text-sm font-black text-white">
                       <FontAwesomeIcon icon={faUser} />
                     </span>
                     <div>
-                      <p className="text-sm font-semibold">Sarah Jenkins</p>
-                      <p className="text-xs text-slate-500">Senior Frontend Engineer at Meta</p>
+                      <p className="text-sm font-semibold">{featuredCourse.instructor}</p>
+                      <p className="text-xs text-slate-500">{featuredCourse.category}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col justify-between gap-5 md:items-end">
-                  <p className="text-3xl font-black text-[#1f22e8]">$89.99</p>
+                  <p className="text-3xl font-black text-[#1f22e8]">{featuredCourse.price}</p>
                   <a
                     className="inline-flex justify-center rounded-md bg-[#302be2] px-7 py-3 text-sm font-bold text-white transition hover:bg-[#1916b8]"
-                    href="#newsletter"
+                    href={`/course-detail?course=${featuredCourse.id || ''}`}
                   >
-                    Enroll Now
+                    View Course
                   </a>
                 </div>
               </div>
             </article>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm font-semibold text-slate-500">
+                No featured course yet.
+              </div>
+            )}
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
               {sideCourses.map((course) => (
@@ -205,7 +202,7 @@ const Home = () => {
                 <div>
                   <h3 className="font-semibold">Global Community</h3>
                   <p className="mt-1 text-sm leading-6 text-indigo-100">
-                    Network with 200k+ learners from 150 countries.
+                    Network with learners from your online course platform.
                   </p>
                 </div>
               </div>
@@ -232,8 +229,8 @@ const Home = () => {
                 alt="Student testimonial avatar"
               />
               <div>
-                <h3 className="text-sm font-semibold">Alex Rivera</h3>
-                <p className="text-xs text-slate-500">Tech Lead at Shopify</p>
+                <h3 className="text-sm font-semibold">Student testimonial</h3>
+                <p className="text-xs text-slate-500">Learner feedback</p>
               </div>
             </div>
           </article>

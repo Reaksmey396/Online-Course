@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faEnvelope,
@@ -5,8 +6,65 @@ import {
   faLock,
   faUser,
 } from '@fortawesome/free-solid-svg-icons'
+import { authRequest, getRedirectPath, hasTokenSession, saveAuthSession } from '../../lib/authApi'
 
 const Register = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+    acceptedTerms: false,
+  })
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target
+    setFormData((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value,
+    }))
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+
+    if (!formData.acceptedTerms) {
+      setError('Please agree to the terms and privacy policy.')
+      return
+    }
+
+    if (formData.password !== formData.password_confirmation) {
+      setError('Password confirmation does not match.')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const data = await authRequest('/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.password_confirmation,
+      })
+
+      saveAuthSession(data)
+
+      if (localStorage.getItem('auth_mode') !== 'cookie' && !hasTokenSession()) {
+        throw new Error('Registration reached the backend, but Sanctum cookies are blocked by CORS and no token was returned.')
+      }
+
+      window.location.href = getRedirectPath()
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <main className="h-screen overflow-hidden bg-white text-[#111827]">
       <section className="grid h-screen overflow-hidden lg:grid-cols-[50%_50%]">
@@ -52,15 +110,19 @@ const Register = () => {
               <p className="mt-2 text-base text-slate-500">Start learning with coding courses built around real projects.</p>
             </div>
 
-            <form className="mt-8 grid gap-4">
+            <form className="mt-8 grid gap-4" onSubmit={handleSubmit}>
               <label className="grid gap-1.5 text-sm font-semibold tracking-wide">
                 Full Name
                 <div className="relative">
                   <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faUser} />
                   <input
                     className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    name="name"
+                    onChange={handleChange}
                     placeholder="Enter your full name"
+                    required
                     type="text"
+                    value={formData.name}
                   />
                 </div>
               </label>
@@ -71,8 +133,12 @@ const Register = () => {
                   <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faEnvelope} />
                   <input
                     className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    name="email"
+                    onChange={handleChange}
                     placeholder="name@company.com"
+                    required
                     type="email"
+                    value={formData.email}
                   />
                 </div>
               </label>
@@ -83,8 +149,13 @@ const Register = () => {
                   <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faLock} />
                   <input
                     className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    minLength={8}
+                    name="password"
+                    onChange={handleChange}
                     placeholder="Create a password"
+                    required
                     type="password"
+                    value={formData.password}
                   />
                 </div>
               </label>
@@ -95,22 +166,43 @@ const Register = () => {
                   <FontAwesomeIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-base text-slate-500" icon={faLock} />
                   <input
                     className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-base text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-[#2459df] focus:ring-4 focus:ring-blue-100"
+                    minLength={8}
+                    name="password_confirmation"
+                    onChange={handleChange}
                     placeholder="Confirm password"
+                    required
                     type="password"
+                    value={formData.password_confirmation}
                   />
                 </div>
               </label>
 
               <label className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-5 text-slate-700">
-                <input className="h-4 w-4 rounded border-slate-300 accent-[#2459df]" type="checkbox" />
+                <input
+                  checked={formData.acceptedTerms}
+                  className="h-4 w-4 rounded border-slate-300 accent-[#2459df]"
+                  name="acceptedTerms"
+                  onChange={handleChange}
+                  type="checkbox"
+                />
                 <span>I agree to the</span>
                 <a className="font-semibold text-[#0d49c8] hover:text-[#06328e]" href="#terms">Terms</a>
                 <span>and</span>
                 <a className="font-semibold text-[#0d49c8] hover:text-[#06328e]" href="#privacy">Privacy Policy</a>
               </label>
 
-              <button className="h-12 rounded-lg bg-[#2459df] text-base font-semibold text-white shadow-lg shadow-blue-700/20 transition hover:bg-[#1746bc]" type="button">
-                Create Account
+              {error && (
+                <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                  {error}
+                </p>
+              )}
+
+              <button
+                className="h-12 rounded-lg bg-[#2459df] text-base font-semibold text-white shadow-lg shadow-blue-700/20 transition hover:bg-[#1746bc] disabled:cursor-not-allowed disabled:bg-slate-400"
+                disabled={isSubmitting}
+                type="submit"
+              >
+                {isSubmitting ? 'Creating account...' : 'Create Account'}
               </button>
             </form>
 
