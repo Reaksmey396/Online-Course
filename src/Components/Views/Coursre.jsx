@@ -9,13 +9,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { getCategories, getCourses } from '../../lib/courseApi'
 
-const courses = [
-  
-]
+const courses = []
 
 const filters = {
-  Categories: [
-  ],
+  Categories: [],
   'Difficulty Level': ['Beginner', 'Intermediate', 'Advanced'],
   'Price Range': ['Free', 'Paid'],
 }
@@ -225,7 +222,9 @@ const Coursre = () => {
                     >
                       {course.title}
                     </a>
-                    <p className="mt-4 text-sm text-slate-700">{course.instructor}</p>
+                    <p className="mt-4 line-clamp-2 min-h-10 text-sm leading-5 text-slate-700">
+                      {course.description || course.category || 'Course details coming soon.'}
+                    </p>
                     <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
                       <FontAwesomeIcon className="text-amber-500" icon={faStar} />
                       <span className="font-semibold">{course.rating}</span>

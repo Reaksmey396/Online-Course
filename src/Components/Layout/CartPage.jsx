@@ -8,6 +8,7 @@ import {
   faUserGraduate,
 } from '@fortawesome/free-solid-svg-icons'
 import { getCurrentUser } from '../../lib/authApi'
+import { clearUnseenCartCount } from '../../lib/cartNotifications'
 
 const getCartItems = () => {
   try {
@@ -45,6 +46,7 @@ const CartPage = () => {
 
         setCurrentUser(user)
         setCartItems(getCartItems().filter((item) => isUserCartItem(item, user)))
+        clearUnseenCartCount(user)
       })
       .catch(() => {
         if (!isMounted) return

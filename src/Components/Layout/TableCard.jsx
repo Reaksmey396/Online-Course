@@ -10,7 +10,14 @@ const isPurchased = (course, purchases) => purchases.some((item) => (
   String(item.course_id || item.id).split('-')[0] === String(course.id)
 ))
 
-const TableCard = ({ courses = [], purchases = getPurchasedCourses(), isAuthenticated = false, onWatchCourse }) => {
+const isSameUser = (item, user) => {
+  if (!user) return false
+
+  return String(item.user_id || item.student_id || '') === String(user.id || '')
+    || String(item.user_email || item.student_email || '').toLowerCase() === String(user.email || '').toLowerCase()
+}
+
+const TableCard = ({ courses = [], purchases = getPurchasedCourses(), isAuthenticated = false, currentUser = null, onWatchCourse }) => {
   const cardItems = courses.length > 0
     ? courses
     : purchases.map((item) => ({
@@ -31,7 +38,8 @@ const TableCard = ({ courses = [], purchases = getPurchasedCourses(), isAuthenti
 
       <div className="grid gap-4 border-b border-slate-100 p-6 md:grid-cols-2 xl:grid-cols-3">
         {cardItems.map((course) => {
-          const unlocked = isAuthenticated && isPurchased(course, purchases)
+          const userPurchases = currentUser ? purchases.filter((item) => isSameUser(item, currentUser)) : purchases
+          const unlocked = isAuthenticated && isPurchased(course, userPurchases)
 
           return (
             <article className={`overflow-hidden rounded-xl border ${unlocked ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-200 bg-slate-50'}`} key={course.id || course.title}>

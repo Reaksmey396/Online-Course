@@ -20,16 +20,16 @@ const Banner = () => {
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
             <a
               className="inline-flex items-center justify-center gap-2 rounded-md bg-[#302be2] px-7 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 transition hover:bg-[#1916b8]"
-              href="/"
+              href="/mentors"
             >
               Explore Courses
               <FontAwesomeIcon icon={faArrowRight} />
             </a>
             <a
               className="inline-flex items-center justify-center rounded-md border border-[#302be2] bg-white px-7 py-4 text-sm font-bold text-[#302be2] transition hover:bg-[#eef0ff]"
-              href="/mentors"
+              href="/popular"
             >
-              How it Works
+              View Popular
             </a>
           </div>
 

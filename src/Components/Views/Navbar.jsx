@@ -1,24 +1,8 @@
 import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBars, faCartShopping, faMoon, faSun, faXmark } from '@fortawesome/free-solid-svg-icons'
-import { getCurrentUser, logout } from '../../lib/authApi'
-
-const isUserCartItem = (item, user) => {
-  if (!user) return false
-
-  return String(item.student_id || '') === String(user.id || '')
-    || String(item.student_email || '').toLowerCase() === String(user.email || '').toLowerCase()
-}
-
-const getCartCount = (user = null) => {
-  try {
-    const cartItems = JSON.parse(localStorage.getItem('course_cart') || '[]')
-
-    return user ? cartItems.filter((item) => isUserCartItem(item, user)).length : 0
-  } catch {
-    return 0
-  }
-}
+import { getCurrentUser, hasAuthSession, logout } from '../../lib/authApi'
+import { clearUnseenCartCount, getUnseenCartCount } from '../../lib/cartNotifications'
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -57,11 +41,16 @@ const Navbar = () => {
   useEffect(() => {
     let isMounted = true
 
+    if (!hasAuthSession()) {
+      setIsAuthChecking(false)
+      return undefined
+    }
+
     getCurrentUser()
       .then((currentUser) => {
         if (isMounted) {
           setUser(currentUser)
-          setCartCount(getCartCount(currentUser))
+          setCartCount(getUnseenCartCount(currentUser))
           setIsAuthChecking(false)
         }
       })
@@ -79,16 +68,31 @@ const Navbar = () => {
   }, [])
 
   useEffect(() => {
-    const updateCartCount = () => setCartCount(getCartCount(user))
+    if (!user) {
+      setCartCount(0)
+      return undefined
+    }
+
+    const updateCartCount = () => setCartCount(getUnseenCartCount(user))
 
     window.addEventListener('storage', updateCartCount)
     window.addEventListener('focus', updateCartCount)
+    window.addEventListener('cart-unseen-change', updateCartCount)
+    updateCartCount()
 
     return () => {
       window.removeEventListener('storage', updateCartCount)
       window.removeEventListener('focus', updateCartCount)
+      window.removeEventListener('cart-unseen-change', updateCartCount)
     }
   }, [user])
+
+  useEffect(() => {
+    if (pathname !== '/cart' || !user) return
+
+    clearUnseenCartCount(user)
+    setCartCount(0)
+  }, [pathname, user])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -145,6 +149,10 @@ const Navbar = () => {
           : 'border-slate-200 text-slate-700 hover:border-[#2d2be8] hover:text-[#2d2be8] dark:border-slate-600 dark:bg-slate-700/70 dark:text-indigo-100 dark:hover:border-indigo-300 dark:hover:text-indigo-100'
       }`}
       href="/cart"
+      onClick={() => {
+        clearUnseenCartCount(user)
+        setCartCount(0)
+      }}
       aria-label="Open cart list"
       title="Cart list"
     >

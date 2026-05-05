@@ -14,7 +14,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { getCategories, getCourses } from '../../lib/courseApi'
 
-const categoryIcons = [faCode, faBriefcase, faPalette, faBullhorn]
+const categoryIcons = [faPalette, faBullhorn, faCode, faBriefcase]
 
 const Home = () => {
   const [categories, setCategories] = useState([])
@@ -65,7 +65,7 @@ const Home = () => {
             </a>
           </div>
 
-          <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {categories.map((category, index) => (
               <article
                 key={category.id || category.name}

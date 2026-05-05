@@ -46,10 +46,12 @@ export const saveAuthSession = (data) => {
   if (token) {
     localStorage.setItem('auth_token', token)
     localStorage.setItem('auth_mode', 'token')
+    localStorage.setItem('auth_logged_in', 'true')
   }
 
   if (user) {
     localStorage.setItem('auth_user', JSON.stringify(user))
+    localStorage.setItem('auth_logged_in', 'true')
   }
 }
 
@@ -57,6 +59,7 @@ export const clearAuthSession = () => {
   localStorage.removeItem('auth_token')
   localStorage.removeItem('auth_user')
   localStorage.removeItem('auth_mode')
+  localStorage.removeItem('auth_logged_in')
 }
 
 const getCookie = (name) => {
@@ -172,11 +175,37 @@ export const authRequest = async (path, body) => {
   }
 }
 
+const isValidAuthUser = (user) => Boolean(
+  user
+    && !Array.isArray(user)
+    && typeof user === 'object'
+    && (user.id || user.email || user.name)
+)
+
+const getStoredAuthUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('auth_user') || 'null')
+  } catch {
+    return null
+  }
+}
+
 export const hasTokenSession = () => Boolean(localStorage.getItem('auth_token'))
+
+export const hasAuthSession = () => Boolean(
+  localStorage.getItem('auth_logged_in') === 'true'
+    && (localStorage.getItem('auth_token') || localStorage.getItem('auth_mode'))
+    && isValidAuthUser(getStoredAuthUser())
+)
 
 export const getCurrentUser = async () => {
   const data = await apiRequest('/user')
   const user = getResponseUser(data) || data
+
+  if (!isValidAuthUser(user)) {
+    clearAuthSession()
+    throw new Error('No authenticated user found.')
+  }
 
   if (user) {
     localStorage.setItem('auth_user', JSON.stringify(user))

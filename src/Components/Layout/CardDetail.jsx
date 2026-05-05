@@ -11,13 +11,16 @@ import {
   faInfinity,
   faMedal,
   faPlay,
+  faQrcode,
   faStar,
   faUsers,
   faVideo,
   faXmark,
 } from '@fortawesome/free-solid-svg-icons'
-import { createEnrollment, createPayment, getCourse, getCourses, getLessons } from '../../lib/courseApi'
+import { createEnrollment, getCourse, getCourses, getLessons } from '../../lib/courseApi'
 import { getCurrentUser } from '../../lib/authApi'
+import { createBakongPayment, verifyBakongPayment } from '../../lib/bakongApi'
+import { addUnseenCartItem } from '../../lib/cartNotifications'
 import TableCard from './TableCard'
 
 const outcomes = []
@@ -165,6 +168,14 @@ const isAuthError = (error) => {
   return message.includes('unauthenticated') || message.includes('unauthorized')
 }
 
+const getPurchaseErrorMessage = (error) => {
+  if (error.message.includes('Bakong QR generation failed')) {
+    return 'Bakong QR generation failed. The backend Bakong API base URL is not responding correctly. Please check BAKONG_API_BASE_URL and your Bakong merchant account settings.'
+  }
+
+  return error.message
+}
+
 const saveLocalPurchase = (course, user, amount) => {
   const purchases = JSON.parse(localStorage.getItem('course_purchases') || '[]')
   const purchase = {
@@ -189,15 +200,53 @@ const saveLocalPurchase = (course, user, amount) => {
   return nextPurchases
 }
 
+const isSameUser = (item, user) => {
+  if (!user) return false
+
+  const itemUser = item.user_id || item.student_id || item.user?.id
+  const itemEmail = item.user_email || item.student_email || item.user?.email
+
+  return String(itemUser || '') === String(user.id || '')
+    || String(itemEmail || '').toLowerCase() === String(user.email || '').toLowerCase()
+}
+
+const isPurchasedByUser = (course, user, purchases) => purchases.some((item) => {
+  const itemCourseId = String(item.course_id || item.id || '').split('-')[0]
+  const courseId = String(course?.id || '')
+
+  return courseId && itemCourseId === courseId && isSameUser(item, user)
+})
+
+const canWatchCourse = (course, user, purchases) => {
+  if (isFreeCourse(course)) return true
+  if (!user) return false
+  if (course?.raw?.has_access || course?.raw?.is_enrolled) return true
+
+  return isPurchasedByUser(course, user, purchases)
+}
+
+const isPaidPayment = (payment) => {
+  const status = String(payment?.status || payment?.payment?.status || '').toLowerCase()
+  const responseCode = payment?.responseCode ?? payment?.data?.responseCode
+
+  return status === 'paid'
+    || status === 'success'
+    || status === 'completed'
+    || responseCode === 0
+}
+
 const CardDetail = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [course, setCourse] = useState(null)
   const [courseItems, setCourseItems] = useState([])
-  const [lessonItems, setLessonItems] = useState([])
+  const [lessonItems, setLessonItems] = useState(curriculum)
   const [lessonVideoUrl, setLessonVideoUrl] = useState('')
   const [purchaseMessage, setPurchaseMessage] = useState('')
   const [purchaseError, setPurchaseError] = useState('')
   const [isBuying, setIsBuying] = useState(false)
+  const [isConfirmingBakong, setIsConfirmingBakong] = useState(false)
+  const [bakongPayment, setBakongPayment] = useState(null)
+  const [receipt, setReceipt] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
   const [purchasedCourses, setPurchasedCourses] = useState(() => (
     JSON.parse(localStorage.getItem('course_purchases') || '[]')
@@ -227,9 +276,12 @@ const CardDetail = () => {
     let isMounted = true
     const courseId = new URLSearchParams(window.location.search).get('course')
 
-    Promise.all([getCourses(), getLessons(), courseId ? getCourse(courseId) : Promise.resolve(null)])
-      .then(([backendCourses, backendLessons, backendCourseDetail]) => {
+    Promise.allSettled([getCourses(), getLessons(), courseId ? getCourse(courseId) : Promise.resolve(null)])
+      .then(([coursesResult, lessonsResult, courseDetailResult]) => {
         if (!isMounted) return
+        const backendCourses = coursesResult.status === 'fulfilled' ? coursesResult.value : []
+        const backendLessons = lessonsResult.status === 'fulfilled' ? lessonsResult.value : []
+        const backendCourseDetail = courseDetailResult.status === 'fulfilled' ? courseDetailResult.value : null
         const listCourse = courseId
           ? backendCourses.find((item) => String(item.id) === String(courseId))
           : backendCourses[0]
@@ -257,7 +309,8 @@ const CardDetail = () => {
       .catch(() => {
         if (isMounted) {
           setCourse(null)
-          setLessonItems([])
+          setCourseItems([])
+          setLessonItems(curriculum)
         }
       })
 
@@ -286,6 +339,7 @@ const CardDetail = () => {
     ? Math.round(((getNumericPrice(oldPrice) - getNumericPrice(detail.price)) / getNumericPrice(oldPrice)) * 100)
     : 0
   const isCourseFree = isFreeCourse(detail)
+  const hasUnlockedCourse = canWatchCourse(detail, currentUser, purchasedCourses)
 
   const requireLogin = () => {
     const redirectPath = encodeURIComponent(`${window.location.pathname}${window.location.search}`)
@@ -315,11 +369,16 @@ const CardDetail = () => {
     try {
       const user = await getRequiredUser()
 
-      if (user) {
-        setIsPreviewOpen(true)
+      if (!user) return
+
+      if (!canWatchCourse(detail, user, purchasedCourses)) {
+        setPurchaseError('Please buy this course before watching the video.')
+        return
       }
+
+      setIsPreviewOpen(true)
     } catch (error) {
-      setPurchaseError(error.message)
+      setPurchaseError(getPurchaseErrorMessage(error))
     }
   }
 
@@ -334,6 +393,7 @@ const CardDetail = () => {
       setCurrentUser(user)
       const cartItems = JSON.parse(localStorage.getItem('course_cart') || '[]')
       const cartId = `${detail.id}-${user?.id || user?.email || 'guest'}`
+      const isNewCartItem = !cartItems.some((item) => item.id === cartId)
       const cartItem = {
         id: cartId,
         course_id: detail.id,
@@ -341,7 +401,7 @@ const CardDetail = () => {
         category: detail.category,
         price: detail.price,
         image: detail.image,
-        videoUrl: getStoredCourseVideoUrl(detail),
+        videoUrl: canWatchCourse(detail, user, purchasedCourses) ? getStoredCourseVideoUrl(detail) : '',
         student_id: user?.id,
         student_name: user?.name || 'Student',
         student_email: user?.email || 'No email',
@@ -353,16 +413,18 @@ const CardDetail = () => {
       ]
 
       localStorage.setItem('course_cart', JSON.stringify(nextCartItems))
+      if (isNewCartItem) {
+        addUnseenCartItem(user)
+      }
       setPurchaseError('')
       setPurchaseMessage('Course added to cart.')
-      window.location.href = '/cart'
     } catch (error) {
       if (isAuthError(error)) {
         requireLogin()
         return
       }
 
-      setPurchaseError(error.message)
+      setPurchaseError(getPurchaseErrorMessage(error))
     }
   }
 
@@ -382,6 +444,12 @@ const CardDetail = () => {
 
       const amount = getNumericPrice(detail.price)
 
+      if (canWatchCourse(detail, user, purchasedCourses)) {
+        setPurchaseMessage('Course unlocked. You can watch the video now.')
+        setIsPreviewOpen(true)
+        return
+      }
+
       if (isCourseFree) {
         const nextPurchases = saveLocalPurchase(detail, user, amount)
         setPurchasedCourses(nextPurchases)
@@ -390,49 +458,123 @@ const CardDetail = () => {
         return
       }
 
-      try {
-        await createPayment({
-          user_id: user.id,
-          course_id: detail.id,
-          amount,
-          method: 'online',
-          status: amount > 0 ? 'paid' : 'free',
-          transaction_id: `web-${Date.now()}`,
-          paid_at: new Date().toISOString(),
-        })
-      } catch (paymentError) {
-        if (!isUnsupportedMethodError(paymentError)) {
-          throw paymentError
-        }
+      const payment = await createBakongPayment({
+        user_id: user.id,
+        user_email: user.email,
+        course_id: detail.id,
+        course_title: detail.title,
+        amount,
+        currency: 'USD',
+        description: `Online Course - ${detail.title}`,
+      })
+
+      if (isPaidPayment(payment)) {
+        const nextPurchases = saveLocalPurchase(detail, user, amount)
+        setPurchasedCourses(nextPurchases)
+        setPurchaseMessage('Course unlocked. You can watch the video now.')
+        setIsPreviewOpen(true)
+        return
       }
 
-      try {
-        await createEnrollment({
-          user_id: user.id,
-          course_id: detail.id,
-          enrolled_at: new Date().toISOString(),
-          status: 'active',
-        })
-      } catch (enrollmentError) {
-        if (!isUnsupportedMethodError(enrollmentError)) {
-          throw enrollmentError
-        }
+      if (!payment.qrImage && !payment.qrText) {
+        throw new Error('Bakong payment was created but no KHQR code was returned by the backend.')
       }
 
-      const nextPurchases = saveLocalPurchase(detail, user, amount)
-      setPurchasedCourses(nextPurchases)
-      setPurchaseMessage('Purchase complete. You are enrolled in this course.')
+      setBakongPayment(payment)
+      setPurchaseMessage('Scan the Bakong KHQR code to pay for this course.')
     } catch (error) {
       if (isAuthError(error)) {
         requireLogin()
         return
       }
 
-      setPurchaseError(error.message)
+      setPurchaseError(getPurchaseErrorMessage(error))
     } finally {
       setIsBuying(false)
     }
   }
+
+  const completePaidPurchase = async (verifiedPayment = null) => {
+    const user = currentUser || await getRequiredUser()
+    if (!user) return
+
+    const amount = getNumericPrice(detail.price)
+    const nextPurchases = saveLocalPurchase(detail, user, amount)
+
+    setPurchasedCourses(nextPurchases)
+    setBakongPayment(null)
+    setPurchaseMessage('Purchase complete. You are enrolled in this course.')
+    setReceipt({
+      title: detail.title,
+      amount,
+      paymentId: verifiedPayment?.id || verifiedPayment?.payment?.id || bakongPayment?.id || '',
+      md5: verifiedPayment?.md5 || verifiedPayment?.payment?.bakong_md5 || bakongPayment?.md5 || '',
+      paidAt: new Date().toISOString(),
+    })
+
+    createEnrollment({
+      user_id: user.id,
+      course_id: detail.id,
+      enrolled_at: new Date().toISOString(),
+      status: 'active',
+    }).catch((enrollmentError) => {
+        if (!isUnsupportedMethodError(enrollmentError)) {
+          setPurchaseError(getPurchaseErrorMessage(enrollmentError))
+        }
+    })
+  }
+
+  const handleConfirmBakongPayment = async () => {
+    setIsConfirmingBakong(true)
+    setPurchaseError('')
+    setPurchaseMessage('')
+
+    try {
+      const verifiedPayment = await verifyBakongPayment(bakongPayment)
+
+      if (!isPaidPayment(verifiedPayment)) {
+        setPurchaseError('Waiting for Bakong to confirm this payment.')
+        return
+      }
+
+      await completePaidPurchase(verifiedPayment)
+    } catch (error) {
+      if (isAuthError(error)) {
+        requireLogin()
+        return
+      }
+
+      setPurchaseError(getPurchaseErrorMessage(error))
+    } finally {
+      setIsConfirmingBakong(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!bakongPayment) return undefined
+
+    let isActive = true
+
+    const checkBakongPayment = async () => {
+      try {
+        const verifiedPayment = await verifyBakongPayment(bakongPayment)
+
+        if (!isActive || !isPaidPayment(verifiedPayment)) return
+
+        await completePaidPurchase(verifiedPayment)
+      } catch {
+        // Keep the QR modal open while the payment provider is still pending or temporarily unavailable.
+      }
+    }
+
+    const timer = window.setInterval(checkBakongPayment, 5000)
+    checkBakongPayment()
+
+    return () => {
+      isActive = false
+      window.clearInterval(timer)
+    }
+  }, [bakongPayment])
 
   const handleWatchCourse = async (selectedCourse) => {
     setPurchaseError('')
@@ -440,12 +582,18 @@ const CardDetail = () => {
     try {
       const user = await getRequiredUser()
 
-      if (user) {
+      if (!user) return
+
+      if (!canWatchCourse(selectedCourse, user, purchasedCourses)) {
         setCourse(selectedCourse)
-        setIsPreviewOpen(true)
+        setPurchaseError('Please buy this course before watching the video.')
+        return
       }
+
+      setCourse(selectedCourse)
+      setIsPreviewOpen(true)
     } catch (error) {
-      setPurchaseError(error.message)
+      setPurchaseError(getPurchaseErrorMessage(error))
     }
   }
 
@@ -578,7 +726,7 @@ const CardDetail = () => {
                 alt={detail.title}
               />
               <button
-                className="absolute inset-0 flex items-center justify-center bg-slate-950/30"
+                className={`absolute inset-0 flex items-center justify-center bg-slate-950/30 ${hasUnlockedCourse ? '' : 'cursor-not-allowed'}`}
                 type="button"
                 aria-label="Preview course video"
                 onClick={handlePreviewCourse}
@@ -616,7 +764,7 @@ const CardDetail = () => {
                   onClick={handleBuyNow}
                   type="button"
                 >
-                  {isBuying ? 'Processing...' : isCourseFree ? 'Watch Now' : 'Buy Now'}
+                  {isBuying ? 'Processing...' : hasUnlockedCourse || isCourseFree ? 'Watch Now' : 'Buy Now'}
                 </button>
                 <button className="inline-flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-[#302be2] bg-white text-sm font-black text-[#302be2] transition hover:bg-[#edf0ff]" onClick={handleAddToCart} type="button">
                   <FontAwesomeIcon icon={faCartShopping} />
@@ -644,7 +792,7 @@ const CardDetail = () => {
         </aside>
       </section>
 
-      <TableCard courses={courseItems} purchases={purchasedCourses} isAuthenticated={Boolean(currentUser)} onWatchCourse={handleWatchCourse} />
+      <TableCard courses={courseItems} purchases={purchasedCourses} isAuthenticated={Boolean(currentUser)} currentUser={currentUser} onWatchCourse={handleWatchCourse} />
 
       {isPreviewOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
@@ -683,6 +831,105 @@ const CardDetail = () => {
               allowFullScreen
             />
           )}
+        </div>
+      )}
+
+      {bakongPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
+          <section className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-5 text-slate-950 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wide text-[#302be2]">
+                  <FontAwesomeIcon icon={faQrcode} />
+                  Bakong KHQR
+                </p>
+                <h2 className="mt-1 text-xl font-black">Scan to pay</h2>
+                <p className="mt-1 text-sm leading-5 text-slate-600">
+                  Scan this QR code, then confirm after payment.
+                </p>
+              </div>
+              <button
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+                onClick={() => setBakongPayment(null)}
+                type="button"
+                aria-label="Close Bakong QR modal"
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <div className="mt-4 grid justify-items-center rounded-lg border border-slate-200 bg-slate-50 p-4">
+              {bakongPayment.qrImage ? (
+                <img className="h-52 w-52 rounded-lg bg-white object-contain p-2" src={bakongPayment.qrImage} alt="Bakong KHQR payment code" />
+              ) : (
+                <div className="grid h-52 w-52 place-items-center rounded-lg bg-white p-4 text-center text-sm text-slate-500">
+                  KHQR code text returned without an image.
+                </div>
+              )}
+              <p className="mt-3 max-w-full truncate text-center text-sm font-semibold text-slate-700">{detail.title}</p>
+              <p className="text-center text-xl font-black text-[#302be2]">
+                ${getNumericPrice(detail.price).toFixed(2)}
+              </p>
+              {bakongPayment.md5 && (
+                <p className="mt-1 max-w-full truncate text-xs text-slate-500">Ref: {bakongPayment.md5}</p>
+              )}
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              <button
+                className="h-11 cursor-wait rounded-lg bg-[#302be2] text-sm font-black text-white"
+                disabled
+                onClick={handleConfirmBakongPayment}
+                type="button"
+              >
+                Waiting QR code
+              </button>
+              <button
+                className="h-10 rounded-lg border border-slate-200 text-sm font-black text-slate-700 transition hover:bg-slate-50"
+                onClick={() => setBakongPayment(null)}
+                type="button"
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {receipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
+          <section className="w-full max-w-sm rounded-xl bg-white p-6 text-center text-slate-950 shadow-2xl">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-xl text-emerald-700">
+              <FontAwesomeIcon icon={faCheck} />
+            </span>
+            <h2 className="mt-4 text-2xl font-black">Payment received</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              You paid for {receipt.title}. The course is unlocked now.
+            </p>
+            <div className="mt-5 rounded-lg bg-slate-50 p-4 text-left text-sm">
+              <div className="flex justify-between gap-4">
+                <span className="text-slate-500">Amount</span>
+                <strong>${Number(receipt.amount || 0).toFixed(2)}</strong>
+              </div>
+              {receipt.md5 && (
+                <div className="mt-2 flex justify-between gap-4">
+                  <span className="text-slate-500">Reference</span>
+                  <strong className="max-w-40 truncate">{receipt.md5}</strong>
+                </div>
+              )}
+              <div className="mt-2 flex justify-between gap-4">
+                <span className="text-slate-500">Paid at</span>
+                <strong>{new Date(receipt.paidAt).toLocaleString()}</strong>
+              </div>
+            </div>
+            <button
+              className="mt-5 h-12 w-full rounded-lg bg-[#302be2] text-sm font-black text-white transition hover:bg-[#1916b8]"
+              onClick={() => setReceipt(null)}
+              type="button"
+            >
+              Close
+            </button>
+          </section>
         </div>
       )}
     </main>
